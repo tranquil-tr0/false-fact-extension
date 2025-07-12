@@ -1,0 +1,32 @@
+{
+  "name": "is-this-real-extension",
+  "version": "1.0.0",
+  "description": "Cross-platform Manifest V3 web extension that checks whether articles convey true information",
+  "scripts": {
+    "test": "echo \"No tests specified\" && exit 0",
+    "lint": "eslint *.js",
+    "build": "echo \"No build process required for basic extension\"",
+    "dev": "echo \"Load extension in browser developer mode\""
+  },
+  "keywords": [
+    "fact-checking",
+    "news",
+    "credibility",
+    "browser-extension",
+    "manifest-v3",
+    "ai"
+  ],
+  "author": "Is This Real? Extension Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/is-this-real-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/is-this-real-extension/issues"
+  },
+  "homepage": "https://github.com/yourusername/is-this-real-extension#readme",
+  "devDependencies": {
+    "eslint": "^8.0.0"
+  }
+}
