@@ -5,16 +5,20 @@ import { setupCounter } from '@/components/counter';
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>
-    <button id="extract-article" type="button">Extract Article Text</button>
+    <a href="https://wxt.dev" target="_blank">
+      <img src="${viteLogo}" class="logo" alt="WXT logo" />
+    </a>
+    <a href="https://www.typescriptlang.org/" target="_blank">
+      <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
+    </a>
+    <h1>WXT + TypeScript</h1>
+    <div class="card">
+      <button id="counter" type="button"></button>
+    </div>
+    <p class="read-the-docs">
+      Click on the WXT and TypeScript logos to learn more
+    </p>
   </div>
 `;
 
-document.querySelector<HTMLButtonElement>('#extract-article')?.addEventListener('click', async () => {
-  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-  if (!tab.id) return;
-  const result = await browser.tabs.sendMessage(tab.id, { action: 'extract-article' });
-  const articleDiv = document.createElement('div');
-  articleDiv.style.marginTop = '1em';
-  articleDiv.innerHTML = `<h2>${result.title}</h2><pre style="white-space: pre-wrap;">${result.content}</pre>`;
-  document.querySelector<HTMLDivElement>('#app')?.appendChild(articleDiv);
-});
+setupCounter(document.querySelector<HTMLButtonElement>('#counter')!);
