@@ -1,6 +1,21 @@
+import { Readability } from '@mozilla/readability';
+
 export default defineContentScript({
-  matches: ['*://*.google.com/*'],
+  matches: ['*://*/*'], // Run on all pages
   main() {
-    console.log('Hello content.');
+    // Listen for messages from the popup
+    browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.action === 'extract-article-text') {
+        // Extract article text using Readability
+        const article = new Readability(document.cloneNode(true) as Document).parse();
+        const response = {
+          title: article?.title || '',
+          content: article?.textContent || '', // Only send plain text for popup display
+        };
+        sendResponse(response);
+        return true; // Indicate async response
+      }
+      return false;
+    });
   },
 });
