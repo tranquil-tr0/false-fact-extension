@@ -10,10 +10,10 @@ export default defineContentScript({
         const article = new Readability(document.cloneNode(true) as Document).parse();
         const response = {
           title: article?.title || '',
-          content: article?.textContent || '', // Only send plain text for popup display
+          content: article?.content || '',
         };
         sendResponse(response);
-        return true; // Indicate async response
+        return true;
       }
       return false;
     });
