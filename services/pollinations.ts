@@ -4,8 +4,7 @@
 
 import type {
   AnalysisResult,
-  PollinationsResponse,
-  AnalinationsRequest,
+  PollinationsRequest,
   PollinationsResponse,
   AnalysisApiResponse
 } from '../types/index.js';
@@ -31,7 +30,7 @@ export class PollinationsService {
   // Pollinations.ai Text API endpoints
   private readonly baseUrl = 'https://text.pollinations.ai';
   // OpenAI-compatible endpoint (as per documentation)
-  private readonly openaiUrl = 'https://text.pollinations.ai/api/chat/completions';
+
   private readonly maxRetries = 3;
   private readonly maxRetryDelay = 10000; // 10 seconds
 
@@ -161,10 +160,8 @@ export class PollinationsService {
     const systemPrompt = this.createSystemPrompt();
     const analysisPrompt = this.createAnalysisPrompt(text);
     
-    // Try multiple API approaches in order of preference
     const strategies = [
-      () => this.tryOpenAICompatibleRequest(systemPrompt, analysisPrompt),
-      () => this.trySimplePostRequest(systemPrompt, analysisPrompt),
+      () => this.trySimpleGetRequest(systemPrompt, analysisPrompt),
       () => this.tryGetRequest(analysisPrompt)
     ];
 
@@ -198,69 +195,43 @@ export class PollinationsService {
   }
 
   /**
-   * Try OpenAI-compatible endpoint
-   * Based on Pollinations.ai API documentation
+   * Try simple GET request to base endpoint (Pollinations.ai Text-To-Text API)
    */
-  private async tryOpenAICompatibleRequest(systemPrompt: string, userPrompt: string): Promise<AnalysisApiResponse> {
-    const request = {
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.1,
-      max_tokens: 1000,
-      json: true // Request JSON response format
-    };
+  private async trySimpleGetRequest(systemPrompt: string, userPrompt: string): Promise<AnalysisApiResponse> {
+    // Combine system and user prompt
+    const prompt = `${systemPrompt}\n\n${userPrompt}`;
+    const encodedPrompt = encodeURIComponent(prompt);
+    // Build query parameters
+    const queryParams = new URLSearchParams({
+      model: 'openai',
+      json: 'true'
+    });
+    const url = `${this.baseUrl}/${encodedPrompt}?${queryParams.toString()}`;
 
-    console.log("Attempting Pollinations.ai OpenAI-compatible request");
-    
-    const response = await this.makeHttpRequest(this.openaiUrl, request);
-    
-    if (!this.validateOpenAIResponse(response)) {
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        'Invalid OpenAI-compatible response format',
-        true,
-        'Please try analyzing the content again'
-      );
+    console.log("Attempting Pollinations.ai simple GET request:", url);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json, text/plain, */*'
+      }
+    });
+
+    if (!response.ok) {
+      throw this.createHttpError(response.status, `GET request failed with status ${response.status}`);
     }
 
-    const content = response.choices[0].message.content;
-    console.log("OpenAI-compatible response received, length:", content.length);
+    const responseText = await response.text();
+    console.log("Pollinations.ai response received, length:", responseText.length);
     
-    return parseAnalysisResponse(content);
-  }
-
-  /**
-   * Try simple POST request to base endpoint
-   */
-  private async trySimplePostRequest(systemPrompt: string, userPrompt: string): Promise<AnalysisApiResponse> {
-    const request = {
-      prompt: `${systemPrompt}\n\n${userPrompt}`,
-      model: "gpt-3.5-turbo"
-    };
-
-    const response = await this.makeHttpRequest(this.baseUrl, request);
-    
-    // Handle different possible response formats
-    let content: string;
-    if (typeof response === 'string') {
-      content = response;
-    } else if (response.choices && response.choices[0]) {
-      content = response.choices[0].message?.content || response.choices[0].text;
-    } else if (response.text) {
-      content = response.text;
-    } else {
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        'Unexpected response format from simple POST',
-        true,
-        'Please try analyzing the content again'
-      );
+    try {
+      // First try to parse as JSON if the response is in JSON format
+      const jsonResponse = JSON.parse(responseText);
+      return parseAnalysisResponse(jsonResponse);
+    } catch (e) {
+      // If not valid JSON, treat as plain text
+      return parseAnalysisResponse(responseText);
     }
-
-    return parseAnalysisResponse(content);
   }
 
   /**
