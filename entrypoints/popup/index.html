@@ -3,11 +3,67 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Default Popup Title</title>
+    <title>Fact Checker</title>
     <meta name="manifest.type" content="browser_action" />
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div class="popup-container">
+        <header class="popup-header">
+          <h1 class="popup-title">Fact Checker</h1>
+          <div class="page-info">
+            <span id="page-url" class="page-url">Loading...</span>
+          </div>
+        </header>
+
+        <main class="popup-main">
+          <div class="analyze-section">
+            <button id="analyze-btn" class="analyze-button" type="button">
+              <span class="button-text">Analyze Content</span>
+              <div class="loading-spinner hidden" id="loading-spinner"></div>
+            </button>
+            <button id="cancel-btn" class="cancel-button hidden" type="button">
+              Cancel
+            </button>
+            <div class="progress-container hidden" id="progress-container">
+              <div class="progress-bar" id="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+              </div>
+              <div class="progress-text" id="progress-text">Initializing...</div>
+              <div class="progress-time" id="progress-time">0s</div>
+            </div>
+          </div>
+
+          <div class="results-section hidden" id="results-section">
+            <div class="result-display" id="result-display">
+              <!-- Results will be populated here -->
+            </div>
+          </div>
+
+          <div class="error-section hidden" id="error-section">
+            <div class="error-message" id="error-message">
+              <div class="error-icon">⚠️</div>
+              <div class="error-content">
+                <div class="error-title" id="error-title">Analysis Failed</div>
+                <div class="error-description" id="error-description">
+                  Unable to analyze content. Please try again.
+                </div>
+                <div class="error-actions">
+                  <button id="retry-btn" class="retry-button">Try Again</button>
+                  <button id="help-btn" class="help-button">Help</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="status-section">
+            <div class="status-message" id="status-message">
+              Ready to analyze content
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
