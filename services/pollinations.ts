@@ -160,38 +160,23 @@ export class PollinationsService {
     const systemPrompt = this.createSystemPrompt();
     const analysisPrompt = this.createAnalysisPrompt(text);
     
-    const strategies = [
-      () => this.trySimpleGetRequest(systemPrompt, analysisPrompt),
-      () => this.tryGetRequest(analysisPrompt)
-    ];
+    try {
+      return await this.trySimpleGetRequest(systemPrompt, analysisPrompt);
+    } catch (error) {
+      console.warn('API request failed:', error);
 
-    let lastError: Error | null = null;
-
-    for (const strategy of strategies) {
-      try {
-        return await strategy();
-      } catch (error) {
-        lastError = error as Error;
-        console.warn('API strategy failed, trying next approach:', error);
-        
-        // If it's a non-retryable error, don't try other strategies
-        if (error instanceof ExtensionError && !error.retryable) {
-          throw error;
-        }
+      // If it's a non-retryable error, throw it directly
+      if (error instanceof ExtensionError && !error.retryable) {
+        throw error;
       }
-    }
 
-    // If all strategies failed, throw the last error
-    if (lastError instanceof ExtensionError) {
-      throw lastError;
+      throw new ExtensionError(
+        AnalysisErrorType.API_UNAVAILABLE,
+        'All API request strategies failed',
+        true,
+        'Please try again later'
+      );
     }
-
-    throw new ExtensionError(
-      AnalysisErrorType.API_UNAVAILABLE,
-      'All API request strategies failed',
-      true,
-      'Please try again later'
-    );
   }
 
   /**
@@ -231,97 +216,6 @@ export class PollinationsService {
     } catch (e) {
       // If not valid JSON, treat as plain text
       return parseAnalysisResponse(responseText);
-    }
-  }
-
-  /**
-   * Try GET request with prompt in URL
-   * Based on Pollinations.ai Text-To-Text API: GET https://text.pollinations.ai/{prompt}
-   */
-  private async tryGetRequest(prompt: string): Promise<AnalysisApiResponse> {
-    // Truncate prompt for GET request to avoid URL length limits
-    const truncatedPrompt = prompt.length > 1000 ? prompt.substring(0, 1000) + '...' : prompt;
-    const encodedPrompt = encodeURIComponent(truncatedPrompt);
-    
-    // Add query parameters for better control
-    const queryParams = new URLSearchParams({
-      model: 'openai',  // Use OpenAI model as default
-      json: 'true'      // Request JSON response format
-    });
-    
-    const url = `${this.baseUrl}/${encodedPrompt}?${queryParams.toString()}`;
-
-    console.log("Attempting Pollinations.ai GET request:", url);
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json, text/plain, */*'
-      }
-    });
-
-    if (!response.ok) {
-      throw this.createHttpError(response.status, `GET request failed with status ${response.status}`);
-    }
-
-    const responseText = await response.text();
-    console.log("Pollinations.ai response received, length:", responseText.length);
-    
-    try {
-      // First try to parse as JSON if the response is in JSON format
-      const jsonResponse = JSON.parse(responseText);
-      return parseAnalysisResponse(jsonResponse);
-    } catch (e) {
-      // If not valid JSON, treat as plain text
-      return parseAnalysisResponse(responseText);
-    }
-  }
-
-  /**
-   * Makes HTTP request with proper error handling
-   */
-  private async makeHttpRequest(url: string, body: any): Promise<any> {
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (!response.ok) {
-        throw this.createHttpError(response.status, `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        return await response.json();
-      } else {
-        return await response.text();
-      }
-
-    } catch (error) {
-      if (error instanceof ExtensionError) {
-        throw error;
-      }
-
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new ExtensionError(
-          AnalysisErrorType.NETWORK_ERROR,
-          'Network connection failed',
-          true,
-          'Please check your internet connection and try again'
-        );
-      }
-
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        `Request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        true,
-        'Please try again later'
-      );
     }
   }
 
@@ -380,18 +274,6 @@ export class PollinationsService {
       true,
       'Please check your internet connection and try again'
     );
-  }
-
-  /**
-   * Validates OpenAI-compatible response
-   */
-  private validateOpenAIResponse(response: any): boolean {
-    return response && 
-           response.choices && 
-           Array.isArray(response.choices) && 
-           response.choices.length > 0 &&
-           response.choices[0].message &&
-           typeof response.choices[0].message.content === 'string';
   }
 
   /**
