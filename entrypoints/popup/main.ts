@@ -268,13 +268,33 @@ function getCredibilityColor(level: string): string {
   }
 }
 
-// Format reasoning text for display
-function formatReasoning(reasoning: string): string {
-  return reasoning
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br>')
-    .replace(/^/, '<p>')
-    .replace(/$/, '</p>');
+// Format reasoning object for display
+function formatReasoning(reasoning: {
+  factual: string[];
+  unfactual: string[];
+  subjective: string[];
+  objective: string[];
+}): string {
+  type ReasoningKey = keyof typeof reasoning;
+  const sections: { label: string; key: ReasoningKey }[] = [
+    { label: 'Factual', key: 'factual' },
+    { label: 'Unfactual', key: 'unfactual' },
+    { label: 'Subjective', key: 'subjective' },
+    { label: 'Objective', key: 'objective' }
+  ];
+  return sections
+    .map(
+      ({ label, key }) =>
+        Array.isArray(reasoning[key]) && reasoning[key].length
+          ? `<div class="reasoning-subsection">
+              <div class="reasoning-subheader">${label} Reasons</div>
+              <ul>${(reasoning[key] as string[])
+                .map((reason: string) => `<li>${reason}</li>`)
+                .join('')}</ul>
+            </div>`
+          : ''
+    )
+    .join('');
 }
 
 // Handle analyze button click with enhanced error recovery

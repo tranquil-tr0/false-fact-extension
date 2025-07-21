@@ -13,7 +13,12 @@ export interface AnalysisResult {
     false: number;     // Percentage 0-100
   };
   confidence: number;  // AI confidence 0-100
-  reasoning: string;   // Explanation of analysis
+  reasoning: {
+    factual: string[];
+    unfactual: string[];
+    subjective: string[];
+    objective: string[];
+  };   // Explanation of analysis
   timestamp: number;
   contentHash: string; // For caching
 }

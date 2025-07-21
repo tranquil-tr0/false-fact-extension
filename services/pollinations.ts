@@ -286,9 +286,16 @@ CRITICAL: You must respond with ONLY a valid JSON object. Do not include any exp
 
 You must provide your reasoning first in the JSON object, before any scores or categories.
 
+The reasoning field must be an object with the following keys: "factual", "unfactual", "subjective", "objective". Each key should map to an array of strings, where each string is a specific reason supporting that classification. For example, "reasoning.factual" should be an array of reasons why the content is factual. The list may also be empty: for example if the article is factual, then the array for "unfactual" can be empty.
+
 Required JSON structure:
 {
-  "reasoning": "<detailed explanation of your analysis>",
+  "reasoning": {
+    "factual": [ "reason 1", "reason 2", ... ],
+    "unfactual": [ "reason 1", ... ],
+    "subjective": [ "reason 1", ... ],
+    "objective": [ "reason 1", ... ]
+  },
   "credibilityScore": <number 0-100>,
   "categories": {
     "fact": <percentage 0-100>,
@@ -499,7 +506,12 @@ Respond with the JSON analysis following the exact format specified in the syste
       id: `analysis_${now}_${Math.random().toString(36).substring(2, 9)}`,
       url: resultUrl,
       title: resultTitle,
-      reasoning: apiResponse.reasoning,
+      reasoning: {
+        factual: apiResponse.reasoning?.factual ?? [],
+        unfactual: apiResponse.reasoning?.unfactual ?? [],
+        subjective: apiResponse.reasoning?.subjective ?? [],
+        objective: apiResponse.reasoning?.objective ?? []
+      },
       credibilityScore: apiResponse.credibilityScore,
       categories: {
         fact: apiResponse.categories.fact,

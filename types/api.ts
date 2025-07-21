@@ -34,7 +34,12 @@ export interface AnalysisApiResponse {
     false: number;
   };
   confidence: number;
-  reasoning: string;
+  reasoning: {
+    factual: string[];
+    unfactual: string[];
+    subjective: string[];
+    objective: string[];
+  };
 }
 
 export interface ContentScript {
