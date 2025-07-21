@@ -284,16 +284,18 @@ export class PollinationsService {
 
 CRITICAL: You must respond with ONLY a valid JSON object. Do not include any explanatory text before or after the JSON.
 
+You must provide your reasoning first in the JSON object, before any scores or categories.
+
 Required JSON structure:
 {
+  "reasoning": "<detailed explanation of your analysis>",
   "credibilityScore": <number 0-100>,
   "categories": {
     "fact": <percentage 0-100>,
     "opinion": <percentage 0-100>,
     "false": <percentage 0-100>
   },
-  "confidence": <number 0-100>,
-  "reasoning": "<detailed explanation of your analysis>"
+  "confidence": <number 0-100>
 }
 
 SCORING GUIDELINES:
@@ -497,6 +499,7 @@ Respond with the JSON analysis following the exact format specified in the syste
       id: `analysis_${now}_${Math.random().toString(36).substring(2, 9)}`,
       url: resultUrl,
       title: resultTitle,
+      reasoning: apiResponse.reasoning,
       credibilityScore: apiResponse.credibilityScore,
       categories: {
         fact: apiResponse.categories.fact,
@@ -504,7 +507,6 @@ Respond with the JSON analysis following the exact format specified in the syste
         false: apiResponse.categories.false
       },
       confidence: apiResponse.confidence,
-      reasoning: apiResponse.reasoning,
       timestamp: now,
       contentHash: generateContentHash(content, resultUrl)
     };
