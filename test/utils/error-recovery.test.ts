@@ -308,60 +308,44 @@ describe('GracefulDegradationService', () => {
 
       expect(result.url).toBe(url);
       expect(result.title).toBe(title);
-      expect(result.credibilityScore).toBeGreaterThan(0);
-      expect(result.credibilityScore).toBeLessThanOrEqual(100);
-      expect(result.confidence).toBe(30); // Low confidence for fallback
-      expect(result.reasoning).toContain('Fallback analysis');
-      expect(result.reasoning).toContain('API unavailable');
-      expect(result.categories.fact + result.categories.opinion + result.categories.false).toBeCloseTo(100, 0);
+      expect(result.credibilityScore).toBe(0); // Error state has 0 credibility
+      expect(result.confidence).toBe(0); // No confidence for error state
+      expect(result.reasoning.factual[0]).toContain('Unable to contact analysis engine');
+      expect(result.reasoning.factual[0]).toContain('API unavailable');
+      expect(result.categories.fact).toBe(0);
+      expect(result.categories.opinion).toBe(0);
+      expect(result.categories.false).toBe(0);
     });
 
-    it('should handle content with URLs positively', () => {
-      const content = 'According to https://reliable-source.com, this information is verified.';
-      
+    it('should include error message in all reasoning categories', () => {
+      const content = 'Test content';
       const result = gracefulDegradationService.createFallbackAnalysisResult(content);
       
-      // Content with URLs should be detected and mentioned in reasoning
-      expect(result.credibilityScore).toBeGreaterThan(0);
-      expect(result.reasoning).toContain('contains URLs');
+      const errorMessage = result.reasoning.factual[0];
+      
+      // All categories should have the same error message
+      expect(result.reasoning.factual[0]).toBe(errorMessage);
+      expect(result.reasoning.unfactual[0]).toBe(errorMessage);
+      expect(result.reasoning.subjective[0]).toBe(errorMessage);
+      expect(result.reasoning.objective[0]).toBe(errorMessage);
     });
 
-    it('should handle questionable language negatively', () => {
-      const content = 'This is allegedly true but reportedly unconfirmed according to rumors.';
+    it('should format 404 errors appropriately', () => {
+      const content = 'Test content';
+      const result = gracefulDegradationService.createFallbackAnalysisResult(
+        content, 'https://example.com', 'Test', '404 Not Found'
+      );
       
-      const result = gracefulDegradationService.createFallbackAnalysisResult(content);
-      
-      // Content with questionable language should get lower credibility
-      expect(result.credibilityScore).toBeLessThan(50);
-      expect(result.reasoning).toContain('contains uncertain language');
+      expect(result.reasoning.factual[0]).toContain('API endpoint not found (404)');
     });
 
-    it('should handle strong definitive language positively', () => {
-      const content = 'This is definitely a proven fact that has been absolutely confirmed.';
+    it('should format 500 errors appropriately', () => {
+      const content = 'Test content';
+      const result = gracefulDegradationService.createFallbackAnalysisResult(
+        content, 'https://example.com', 'Test', '500 Server Error'
+      );
       
-      const result = gracefulDegradationService.createFallbackAnalysisResult(content);
-      
-      // Content with strong language should be detected and mentioned in reasoning
-      expect(result.credibilityScore).toBeGreaterThan(0);
-      expect(result.reasoning).toContain('contains definitive language');
-    });
-
-    it('should penalize very short content', () => {
-      const shortContent = 'Short text.'; // 2 words, < 50 words, gets -20 penalty
-      const longContent = 'This is a much longer piece of content that provides more context and information for analysis and should receive a higher credibility score due to its length and detail providing comprehensive coverage of the topic with sufficient information to make an informed assessment.'; // > 50 words, gets +15 bonus
-      
-      const shortResult = gracefulDegradationService.createFallbackAnalysisResult(shortContent);
-      const longResult = gracefulDegradationService.createFallbackAnalysisResult(longContent);
-      
-      // Debug the word counts and scores
-      const shortWordCount = shortContent.split(/\s+/).length;
-      const longWordCount = longContent.split(/\s+/).length;
-      
-      console.log('Short content word count:', shortWordCount, 'Score:', shortResult.credibilityScore);
-      console.log('Long content word count:', longWordCount, 'Score:', longResult.credibilityScore);
-      
-      // Verify that word count affects scoring appropriately
-      expect(shortResult.credibilityScore).not.toBe(longResult.credibilityScore);
+      expect(result.reasoning.factual[0]).toContain('API server error (500)');
     });
 
     it('should handle missing URL and title gracefully', () => {
@@ -371,19 +355,16 @@ describe('GracefulDegradationService', () => {
       
       expect(result.url).toBe('unknown');
       expect(result.title).toBe('Untitled Content');
-      expect(result.credibilityScore).toBeGreaterThan(0);
+      expect(result.id).toContain('error_');
     });
 
-    it('should generate consistent results for same content', () => {
-      const content = 'Consistent test content for reproducibility.';
+    it('should generate unique IDs for each result', () => {
+      const content = 'Test content';
       
       const result1 = gracefulDegradationService.createFallbackAnalysisResult(content);
       const result2 = gracefulDegradationService.createFallbackAnalysisResult(content);
       
-      expect(result1.credibilityScore).toBe(result2.credibilityScore);
-      expect(result1.categories.fact).toBe(result2.categories.fact);
-      expect(result1.categories.opinion).toBe(result2.categories.opinion);
-      expect(result1.categories.false).toBe(result2.categories.false);
+      expect(result1.id).not.toBe(result2.id);
     });
   });
 

@@ -405,64 +405,6 @@ export class GracefulDegradationService {
         reason?: string
     ): AnalysisResult {
         const now = Date.now();
-        const wordCount = content.split(/\s+/).length;
-
-        // Enhanced heuristic-based analysis as fallback
-        const hasQuestionableWords = /\b(allegedly|reportedly|claims|unconfirmed|rumor|according to|might|could|may|possibly)\b/gi.test(content);
-        const hasStrongLanguage = /\b(definitely|absolutely|certainly|proven|fact|confirmed|undoubtedly|clearly|obviously)\b/gi.test(content);
-        const hasUrls = /https?:\/\/[^\s]+/gi.test(content);
-        const hasCitations = /\b(\[\d+\]|\(\d{4}\)|\d{4}:)\b/gi.test(content);
-        const hasStatistics = /\b\d+(\.\d+)?%|\d+ out of \d+\b/gi.test(content);
-        const hasEmotionalLanguage = /\b(shocking|outrageous|unbelievable|amazing|terrible|horrible|incredible|ridiculous)\b/gi.test(content);
-        const hasQualifiers = /\b(some|many|most|few|several|often|sometimes|rarely)\b/gi.test(content);
-
-        // Basic credibility scoring based on enhanced heuristics
-        let credibilityScore = 50; // Start neutral
-
-        // Source indicators
-        if (hasUrls) credibilityScore += 15; // URLs suggest sourcing
-        if (hasCitations) credibilityScore += 20; // Citations suggest academic rigor
-
-        // Language indicators
-        if (hasStrongLanguage && !hasQuestionableWords) credibilityScore += 15;
-        if (hasQuestionableWords) credibilityScore -= 15;
-        if (hasEmotionalLanguage) credibilityScore -= 20; // Emotional language often indicates opinion
-        if (hasQualifiers && !hasEmotionalLanguage) credibilityScore += 5; // Nuanced language without emotion
-
-        // Evidence indicators
-        if (hasStatistics) credibilityScore += 10; // Statistics suggest data-backed claims
-
-        // Word count based scoring with more granularity
-        if (wordCount < 5) {
-            credibilityScore -= 30; // Extremely short content is very unreliable
-        } else if (wordCount < 20) {
-            credibilityScore -= 20; // Very short content is less reliable
-        } else if (wordCount < 50) {
-            credibilityScore -= 10; // Short content is somewhat less reliable
-        } else if (wordCount > 500) {
-            credibilityScore += 15; // Longer content might be more detailed
-        } else if (wordCount > 100) {
-            credibilityScore += 5; // Moderately long content is slightly more reliable
-        }
-
-        // Ensure score is within bounds
-        credibilityScore = Math.max(0, Math.min(100, credibilityScore));
-
-        // Calculate more balanced category distribution
-        const factPercentage = Math.max(20, Math.min(80, credibilityScore));
-        const opinionPercentage = Math.max(10, Math.min(70, 100 - factPercentage - 10));
-        const falsePercentage = Math.max(0, 100 - factPercentage - opinionPercentage);
-
-        // Build detailed reasoning
-        let reasoningDetails = [];
-        if (hasUrls) reasoningDetails.push('contains URLs (potential sources)');
-        if (hasCitations) reasoningDetails.push('contains citations');
-        if (hasStatistics) reasoningDetails.push('contains statistical data');
-        if (hasQuestionableWords) reasoningDetails.push('contains uncertain language');
-        if (hasStrongLanguage) reasoningDetails.push('contains definitive language');
-        if (hasEmotionalLanguage) reasoningDetails.push('contains emotional language');
-        if (hasQualifiers) reasoningDetails.push('contains qualifying statements');
-        reasoningDetails.push(`word count: ${wordCount}`);
 
         // Format the error reason to be more user-friendly
         let formattedReason = reason || '';
@@ -472,18 +414,26 @@ export class GracefulDegradationService {
             formattedReason = 'API server error (500)';
         }
 
+        // Create a simple error message for all categories
+        const errorMessage = `Unable to contact analysis engine${formattedReason ? ` - ${formattedReason}` : ''}. Please try again later.`;
+
         return {
-            id: `fallback_${now}_${Math.random().toString(36).substring(2, 11)}`,
+            id: `error_${now}_${Math.random().toString(36).substring(2, 11)}`,
             url: url || 'unknown',
             title: title || 'Untitled Content',
-            credibilityScore,
+            credibilityScore: 0,
             categories: {
-                fact: factPercentage,
-                opinion: opinionPercentage,
-                false: falsePercentage
+                fact: 0,
+                opinion: 0,
+                false: 0
             },
-            confidence: 30, // Low confidence for fallback analysis
-            reasoning: `Fallback analysis performed due to service unavailability${formattedReason ? ` - ${formattedReason}` : ''}. This is a basic assessment based on simple content patterns and should not be considered as reliable as full AI analysis. Key indicators: ${reasoningDetails.join(', ')}.`,
+            confidence: 0, // No confidence for error state
+            reasoning: {
+                factual: [errorMessage],
+                unfactual: [errorMessage],
+                subjective: [errorMessage],
+                objective: [errorMessage]
+            },
             timestamp: now,
             contentHash: this.generateSimpleHash(content + (url || ''))
         };
