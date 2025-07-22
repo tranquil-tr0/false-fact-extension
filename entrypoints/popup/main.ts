@@ -1217,46 +1217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     origShowResults(args[0]);
     setTimeout(setupResultTooltips, 100); // Wait for DOM
   };
-
-  if (!localStorage.getItem('ffx_onboarded')) {
-    setTimeout(() => {
-      showOnboardingModal();
-      localStorage.setItem('ffx_onboarded', '1');
-    }, 400);
-  }
 });
-
-function showOnboardingModal() {
-  const modal = document.createElement('div');
-  modal.className = 'onboarding-modal';
-  modal.innerHTML = `
-    <div class="onboarding-content">
-      <h2>Welcome to Fact Checker!</h2>
-      <ul>
-        <li>🔍 <b>Analyze</b> any page with one click</li>
-        <li>⚡ <b>Fast</b> and privacy-friendly</li>
-        <li>💡 <b>Tooltips</b> guide you through every step</li>
-        <li>⌨️ <b>Keyboard shortcuts</b> for power users</li>
-      </ul>
-      <button class="onboarding-close" tabindex="0">Get Started</button>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  setTimeout(() => modal.classList.add('show'), 10);
-  const closeBtn = modal.querySelector('.onboarding-close') as HTMLElement;
-  closeBtn?.focus();
-  closeBtn?.addEventListener('click', () => {
-    modal.classList.remove('show');
-    setTimeout(() => modal.remove(), 300);
-  });
-  // Trap focus
-  closeBtn?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      closeBtn.click();
-    }
-  });
-}
 
 (function ensureTooltipStyles() {
   if (document.getElementById('ffx-tooltip-styles')) return;
@@ -1276,14 +1237,6 @@ function showOnboardingModal() {
     .tooltip-arrow-right { left: 100%; top: 50%; transform: translateY(-50%); border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 7px solid #23272f; }
     .tooltip-light .tooltip-arrow-right { border-left-color: #fff; }
     .tooltip-content { pointer-events: none; }
-    .onboarding-modal { position: fixed; z-index: 10000; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(30,32,38,0.72); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s cubic-bezier(.4,0,.2,1); pointer-events: none; }
-    .onboarding-modal.show { opacity: 1; pointer-events: auto; }
-    .onboarding-content { background: #fff; color: #23272f; border-radius: 10px; padding: 32px 28px 24px; box-shadow: 0 4px 32px rgba(0,0,0,0.18); min-width: 320px; max-width: 90vw; text-align: center; animation: fadeIn 0.4s; }
-    .onboarding-content h2 { margin-top: 0; font-size: 1.5em; margin-bottom: 18px; }
-    .onboarding-content ul { list-style: none; padding: 0; margin: 0 0 18px 0; }
-    .onboarding-content li { margin: 10px 0; font-size: 1.08em; display: flex; align-items: center; gap: 8px; }
-    .onboarding-close { margin-top: 10px; padding: 10px 24px; font-size: 1em; background: #5e54e6; color: #fff; border: none; border-radius: 6px; cursor: pointer; transition: background 0.18s; }
-    .onboarding-close:hover, .onboarding-close:focus { background: #4f46e5; }
   `;
   document.head.appendChild(style);
 })();
