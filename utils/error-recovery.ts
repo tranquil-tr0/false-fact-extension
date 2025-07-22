@@ -454,8 +454,7 @@ export class GracefulDegradationService {
             credibilityScore: 0,
             categories: {
                 fact: 0,
-                opinion: 0,
-                false: 0
+                opinion: 0
             },
             confidence: 0, // No confidence for error state
             reasoning: {

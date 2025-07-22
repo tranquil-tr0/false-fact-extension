@@ -223,8 +223,8 @@ export class IconManager {
     const score = result.credibilityScore;
     
     // Determine primary content type based on categories
-    const { fact, opinion, false: falseContent } = result.categories;
-    const maxCategory = Math.max(fact, opinion, falseContent);
+    const { fact, opinion } = result.categories;
+    const maxCategory = Math.max(fact, opinion);
     
     // High credibility (70+ score and primarily factual)
     if (score >= 70 && fact === maxCategory) {
@@ -236,7 +236,7 @@ export class IconManager {
     }
     
     // Low credibility (below 40 score or primarily false)
-    if (score < 40 || falseContent === maxCategory) {
+    if (score < 40) {
       return {
         type: 'low-credibility',
         badgeText: '!',

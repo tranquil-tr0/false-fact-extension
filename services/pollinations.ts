@@ -299,8 +299,7 @@ Required JSON structure:
   "credibilityScore": <number 0-100>,
   "categories": {
     "fact": <percentage 0-100>,
-    "opinion": <percentage 0-100>,
-    "false": <percentage 0-100>
+    "opinion": <percentage 0-100>
   },
   "confidence": <number 0-100>
 }
@@ -317,7 +316,6 @@ credibilityScore (0-100):
 categories (must sum to approximately 100):
 - fact: Verifiable statements that can be checked against reliable sources
 - opinion: Subjective statements, personal views, interpretations, or editorial content
-- false: Demonstrably incorrect information, misleading claims, or unsubstantiated assertions
 
 confidence (0-100):
 - 90-100: Very confident in assessment, clear indicators present
@@ -380,7 +378,7 @@ ANALYSIS INSTRUCTIONS:
 2. Identify opinion statements vs factual assertions
 3. Look for potential misinformation or misleading information
 4. Consider the source context and credibility indicators
-5. Assess the overall balance of fact, opinion, and false information
+5. Assess the overall balance of fact and opinion information
 6. Provide confidence level based on available evidence and clarity of assessment
 
 ${this.getContentTypeSpecificInstructions(contentType)}
@@ -515,8 +513,7 @@ Respond with the JSON analysis following the exact format specified in the syste
       credibilityScore: apiResponse.credibilityScore,
       categories: {
         fact: apiResponse.categories.fact,
-        opinion: apiResponse.categories.opinion,
-        false: apiResponse.categories.false
+        opinion: apiResponse.categories.opinion
       },
       confidence: apiResponse.confidence,
       timestamp: now,
