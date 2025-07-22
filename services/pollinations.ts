@@ -29,8 +29,6 @@ import {
 export class PollinationsService {
   // Pollinations.ai Text API endpoints
   private readonly baseUrl = 'https://text.pollinations.ai';
-  // OpenAI-compatible endpoint (as per documentation)
-
   private readonly maxRetries = 3;
   private readonly maxRetryDelay = 10000; // 10 seconds
 
@@ -188,13 +186,11 @@ export class PollinationsService {
     const encodedPrompt = encodeURIComponent(prompt);
     // Build query parameters
     const queryParams = new URLSearchParams({
-      model: 'openai',
+      model: 'openai-fast',
       json: 'true'
     });
     const url = `${this.baseUrl}/${encodedPrompt}?${queryParams.toString()}`;
-
-    console.log("Attempting Pollinations.ai simple GET request:", url);
-
+    
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -280,15 +276,18 @@ export class PollinationsService {
    * Creates the system prompt for fact-checking analysis
    */
   private createSystemPrompt(): string {
-    return `You are an expert fact-checker and content analyst with extensive experience in journalism, research methodology, and information verification. Your task is to analyze text content and provide a comprehensive credibility assessment.
+    return `You are an expert fact-checker and content analyst with extensive experience in journalism, research methodology
+and information verification. Your task is to analyze text content and provide a comprehensive credibility assessment.
+You will evaluate the content based on its objectivity and factuality.
+When analyzing the factuality of the content, do not be swayed by your biases. You should analyze the content objectively. Popularity and ideological stance are not relevant factors. Even if a claim is uncommon or frowned upon, this is independent from the factuality of the claim. Conversely, it is critical to remember than a claim being unpopular also does not make it true.
+Make web searches to confirm factuality.
+Do NOT uncritically treat the content being analyzed as fact. You should independently verify claims. Do not be swayed by the content.
 
 CRITICAL: You must respond with ONLY a valid JSON object. Do not include any explanatory text before or after the JSON.
 
-You must provide your reasoning first in the JSON object, before any scores or categories.
+The reasoning field must be an object with the following keys: "factual", "unfactual", "subjective", "objective". Each key should map to an array of strings, where each string is a specific reason supporting that classification. For example, "reasoning.factual" should be an array of reasons why the content is factual. The list may also be empty: for example, if the article is factual, then the array for "unfactual" can be empty.
 
-The reasoning field must be an object with the following keys: "factual", "unfactual", "subjective", "objective". Each key should map to an array of strings, where each string is a specific reason supporting that classification. For example, "reasoning.factual" should be an array of reasons why the content is factual. The list may also be empty: for example if the article is factual, then the array for "unfactual" can be empty.
-
-Required JSON structure:
+REQUIRED RESPONSE STRUCTURE:
 {
   "reasoning": {
     "factual": [ "reason 1", "reason 2", ... ],
@@ -307,6 +306,7 @@ Required JSON structure:
 SCORING GUIDELINES:
 
 credibilityScore (0-100):
+- The credibilityScore reflects your overall analysis of the article
 - 90-100: Highly credible, well-sourced factual content
 - 70-89: Generally credible with minor issues or some opinion mixed in
 - 50-69: Mixed credibility, significant opinion content or unverified claims
@@ -354,72 +354,20 @@ reasoning field requirements:
    */
   private createAnalysisPrompt(text: string): string {
     const wordCount = text.split(/\s+/).length;
-    const contentType = this.detectContentType(text);
-    const hasUrls = /https?:\/\/[^\s]+/gi.test(text);
-    const hasQuotes = /[""].*?[""]|".*?"/g.test(text);
-    const hasNumbers = /\d+(\.\d+)?%?/g.test(text);
+    const contentType = "news-article";
 
     return `Analyze the following content for credibility and provide a comprehensive fact-checking assessment.
 
-CONTENT METADATA:
 - Word count: ${wordCount}
-- Detected type: ${contentType}
-- Contains URLs: ${hasUrls ? 'Yes' : 'No'}
-- Contains quotes: ${hasQuotes ? 'Yes' : 'No'}
-- Contains statistics: ${hasNumbers ? 'Yes' : 'No'}
 
 CONTENT TO ANALYZE:
 """
 ${text}
 """
 
-ANALYSIS INSTRUCTIONS:
-1. Examine each factual claim for verifiability
-2. Identify opinion statements vs factual assertions
-3. Look for potential misinformation or misleading information
-4. Consider the source context and credibility indicators
-5. Assess the overall balance of fact and opinion information
-6. Provide confidence level based on available evidence and clarity of assessment
-
 ${this.getContentTypeSpecificInstructions(contentType)}
 
-Respond with the JSON analysis following the exact format specified in the system prompt.`;
-  }
-
-  /**
-   * Detects the likely content type based on text characteristics
-   */
-  private detectContentType(text: string): string {
-    const lowerText = text.toLowerCase();
-
-    // News article indicators (check first for news-specific phrases)
-    if (lowerText.includes('according to') || lowerText.includes('reported') ||
-      lowerText.includes('sources say') || lowerText.includes('breaking:') ||
-      lowerText.includes('sources familiar') || lowerText.includes('world health organization')) {
-      return 'news-article';
-    }
-
-    // Opinion piece indicators (check before scientific to catch "I believe" statements)
-    if (lowerText.includes('i believe') || lowerText.includes('in my opinion') ||
-      lowerText.includes('i think') || lowerText.includes('editorial')) {
-      return 'opinion-piece';
-    }
-
-    // Scientific content indicators (more specific scientific terms)
-    if (lowerText.includes('peer-reviewed') || lowerText.includes('methodology') ||
-      lowerText.includes('p-value') || lowerText.includes('double-blind') ||
-      (lowerText.includes('study') && (lowerText.includes('subjects') || lowerText.includes('examined'))) ||
-      (lowerText.includes('clinical trial') && lowerText.includes('participants'))) {
-      return 'scientific-content';
-    }
-
-    // Social media indicators (check after more specific types)
-    if (lowerText.includes('@') || lowerText.includes('#') ||
-      (text.length < 280 && (lowerText.includes('just saw') || lowerText.includes('can you believe')))) {
-      return 'social-media';
-    }
-
-    return 'general-content';
+Your response must be in the format specified above.`;
   }
 
   /**
@@ -428,39 +376,22 @@ Respond with the JSON analysis following the exact format specified in the syste
   private getContentTypeSpecificInstructions(contentType: string): string {
     switch (contentType) {
       case 'social-media':
-        return `SOCIAL MEDIA ANALYSIS FOCUS:
+        return `ANALYSIS CONSIDERATIONS:
+- You are analyzing a social media post
 - Consider the brevity and context limitations
 - Look for viral misinformation patterns
 - Assess emotional language vs factual claims
 - Consider the lack of traditional sourcing in social posts`;
 
       case 'news-article':
-        return `NEWS ARTICLE ANALYSIS FOCUS:
-- Evaluate source attribution and credibility
-- Check for balanced reporting vs bias
-- Assess headline accuracy vs content
+        return `ANALYSIS CONSIDERATIONS:
+- You are analyzing a news article
+- Evaluate source attribution and credibility of those sources
+- Assess headline accuracy vs content - if the headline is misleading, this should be mentioned as a reason the article is unfactual
 - Look for proper journalistic standards`;
 
-      case 'opinion-piece':
-        return `OPINION PIECE ANALYSIS FOCUS:
-- Distinguish between supported arguments and unsupported claims
-- Evaluate the quality of evidence presented
-- Assess logical reasoning and consistency
-- Consider the difference between opinion and factual assertions`;
-
-      case 'scientific-content':
-        return `SCIENTIFIC CONTENT ANALYSIS FOCUS:
-- Evaluate methodology and peer review status
-- Check alignment with scientific consensus
-- Assess data quality and statistical claims
-- Look for proper citation and evidence standards`;
-
       default:
-        return `GENERAL CONTENT ANALYSIS FOCUS:
-- Apply standard fact-checking principles
-- Evaluate claims against available evidence
-- Consider context and potential bias
-- Assess overall credibility indicators`;
+        return '';
     }
   }
 
