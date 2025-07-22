@@ -31,7 +31,6 @@ export interface AnalysisApiResponse {
   categories: {
     fact: number;
     opinion: number;
-    false: number;
   };
   confidence: number;
   reasoning: {

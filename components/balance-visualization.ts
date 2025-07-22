@@ -1,5 +1,5 @@
 /**
- * Balance visualization component for displaying fact/opinion/false percentages
+ * Balance visualization component for displaying fact/opinion percentages
  */
 
 import { AnalysisResult } from '../types/models.js';
@@ -48,10 +48,6 @@ export class BalanceVisualization {
             <span class="segment-label">Opinion</span>
             <span class="segment-percentage">0%</span>
           </div>
-          <div class="balance-segment false-segment" data-category="false" role="meter" aria-label="False content percentage" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-            <span class="segment-label">False</span>
-            <span class="segment-percentage">0%</span>
-          </div>
         </div>
       </div>
       <div class="credibility-score">
@@ -71,7 +67,6 @@ export class BalanceVisualization {
     // Update segment widths and labels
     this.updateSegment('fact', categories.fact);
     this.updateSegment('opinion', categories.opinion);
-    this.updateSegment('false', categories.false);
     
     // Update overall credibility score
     this.updateCredibilityScore(credibilityScore, confidence);
@@ -80,7 +75,7 @@ export class BalanceVisualization {
     this.updateCredibilityLevel(credibilityScore);
   }
 
-  private updateSegment(category: 'fact' | 'opinion' | 'false', percentage: number): void {
+  private updateSegment(category: 'fact' | 'opinion', percentage: number): void {
     const segment = this.container.querySelector(`[data-category="${category}"]`) as HTMLElement;
     if (!segment) return;
 

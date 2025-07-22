@@ -96,23 +96,6 @@ export class DetailedAnalysis {
                 </div>
               </div>
             </div>
-            <div class="category-item false-category">
-              <div class="category-header">
-                <span class="category-name" id="false-category-label">False Content</span>
-                <span class="category-percentage" aria-labelledby="false-category-label">--</span>
-              </div>
-              <div class="category-confidence">
-                <div class="confidence-indicator" role="meter" aria-label="False content confidence level" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                  <div class="confidence-dots">
-                    <span class="dot" aria-hidden="true"></span>
-                    <span class="dot" aria-hidden="true"></span>
-                    <span class="dot" aria-hidden="true"></span>
-                    <span class="dot" aria-hidden="true"></span>
-                    <span class="dot" aria-hidden="true"></span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
         <div class="analysis-metadata">
@@ -285,13 +268,12 @@ export class DetailedAnalysis {
       .replace(/^(.*)$/, '<p>$1</p>'); // Wrap in paragraph
   }
 
-  private updateCategoryBreakdown(categories: { fact: number; opinion: number; false: number }, confidence: number): void {
+  private updateCategoryBreakdown(categories: { fact: number; opinion: number }, confidence: number): void {
     this.updateCategoryItem('fact', categories.fact, confidence);
     this.updateCategoryItem('opinion', categories.opinion, confidence);
-    this.updateCategoryItem('false', categories.false, confidence);
   }
 
-  private updateCategoryItem(category: 'fact' | 'opinion' | 'false', percentage: number, confidence: number): void {
+  private updateCategoryItem(category: 'fact' | 'opinion', percentage: number, confidence: number): void {
     const categoryItem = this.container.querySelector(`.${category}-category`);
     if (!categoryItem) return;
 

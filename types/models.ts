@@ -10,7 +10,6 @@ export interface AnalysisResult {
   categories: {
     fact: number;      // Percentage 0-100
     opinion: number;   // Percentage 0-100
-    false: number;     // Percentage 0-100
   };
   confidence: number;  // AI confidence 0-100
   reasoning: {

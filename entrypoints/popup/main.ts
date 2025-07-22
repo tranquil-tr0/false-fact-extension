@@ -300,13 +300,6 @@ function createResultsHTML(result: AnalysisResult): string {
           <div class="category-percentage">${result.categories.opinion}%</div>
         </div>
         
-        <div class="category-item">
-          <div class="category-label">False</div>
-          <div class="category-bar">
-            <div class="category-fill false" style="width: ${result.categories.false}%"></div>
-          </div>
-          <div class="category-percentage">${result.categories.false}%</div>
-        </div>
       </div>
       
       <div class="reasoning-section">
@@ -645,8 +638,7 @@ function handleShareResults() {
   const shareText = `Fact-check results for ${state.currentUrl}:\n` +
     `Credibility: ${state.analysisResult.credibilityScore}%\n` +
     `Factual: ${state.analysisResult.categories.fact}% | ` +
-    `Opinion: ${state.analysisResult.categories.opinion}% | ` +
-    `False: ${state.analysisResult.categories.false}%`;
+    `Opinion: ${state.analysisResult.categories.opinion}%`;
 
   // Copy to clipboard
   navigator.clipboard.writeText(shareText).then(() => {
