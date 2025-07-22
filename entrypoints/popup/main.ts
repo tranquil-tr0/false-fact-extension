@@ -88,11 +88,15 @@ function isAnalyzableUrl(url: string): boolean {
 
 // Update UI state with enhanced progress indicators
 function updateUIState(newStatus: PopupState['analysisStatus']) {
+  const previousStatus = state.analysisStatus;
   state.analysisStatus = newStatus;
 
   // Hide all sections first
   resultsSection.classList.add('hidden');
   errorSection.classList.add('hidden');
+
+  // Update progress stages
+  updateProgressStages(newStatus);
 
   switch (newStatus) {
     case 'idle':
@@ -117,9 +121,20 @@ function updateUIState(newStatus: PopupState['analysisStatus']) {
       cancelBtn.classList.remove('hidden');
       state.canCancel = true;
       state.analysisStartTime = Date.now();
+      
+      // Show indeterminate progress initially
+      if (progressBar) {
+        progressBar.classList.add('indeterminate');
+      }
+      
       updateProgress(20, 'Extracting content from page...');
       startProgressTimer();
       updateStatus('Extracting content from page...');
+      
+      // Add pulsing effect to progress text
+      if (progressText) {
+        progressText.classList.add('pulsing');
+      }
       break;
 
     case 'analyzing':
@@ -130,8 +145,20 @@ function updateUIState(newStatus: PopupState['analysisStatus']) {
       progressContainer.classList.remove('hidden');
       cancelBtn.classList.remove('hidden');
       state.canCancel = true;
+      
+      // Switch from indeterminate to determinate progress
+      if (progressBar) {
+        progressBar.classList.remove('indeterminate');
+      }
+      
+      // Animate progress transition
       updateProgress(60, 'Analyzing content for credibility...');
       updateStatus('Analyzing content for credibility...');
+      
+      // Show success transition from previous state if applicable
+      if (previousStatus === 'extracting') {
+        showTransitionFeedback('Content extracted successfully');
+      }
       break;
 
     case 'complete':
@@ -145,7 +172,14 @@ function updateUIState(newStatus: PopupState['analysisStatus']) {
       state.canCancel = false;
       stopProgressTimer();
       updateProgress(100, 'Analysis complete');
-      updateStatus('Analysis complete');
+      
+      // Show success feedback with animation
+      showSuccessFeedback('Analysis complete');
+      
+      // Add entrance animation to results
+      if (resultsSection) {
+        resultsSection.style.animation = 'fadeIn 0.5s ease-out';
+      }
       break;
 
     case 'error':
@@ -159,6 +193,11 @@ function updateUIState(newStatus: PopupState['analysisStatus']) {
       state.canCancel = false;
       stopProgressTimer();
       updateStatus('Analysis failed');
+      
+      // Add entrance animation to error section
+      if (errorSection) {
+        errorSection.style.animation = 'fadeIn 0.4s ease-out';
+      }
       break;
   }
 }
@@ -177,7 +216,7 @@ function showError(title: string, description: string, type: string) {
   updateUIState('error');
 }
 
-// Show results with visualization
+// Show results with visualization and enhanced feedback
 function showResults(analysisResult: AnalysisResult) {
   state.analysisResult = analysisResult;
 
@@ -185,7 +224,36 @@ function showResults(analysisResult: AnalysisResult) {
   const resultsHTML = createResultsHTML(analysisResult);
   resultDisplay.innerHTML = resultsHTML;
 
+  // Update UI state to complete
   updateUIState('complete');
+  
+  // Add highlight animation to results with a slight delay for better visual feedback
+  setTimeout(() => {
+    // Find and animate the credibility score
+    const scoreElement = resultDisplay.querySelector('.credibility-score');
+    if (scoreElement) {
+      scoreElement.classList.add('highlight-animation');
+    }
+    
+    // Animate category bars sequentially
+    const categoryBars = resultDisplay.querySelectorAll('.category-fill');
+    categoryBars.forEach((element, index) => {
+      const bar = element as HTMLElement;
+      setTimeout(() => {
+        // Force a reflow to restart the animation
+        bar.style.width = '0%';
+        
+        // Set the actual width after a tiny delay
+        setTimeout(() => {
+          const percentage = bar.parentElement?.nextElementSibling?.textContent || '0%';
+          bar.style.width = percentage;
+        }, 50);
+      }, index * 200); // Stagger the animations
+    });
+  }, 300);
+  
+  // Add event listeners to expandable sections if they exist
+  setupResultInteractions();
 }
 
 // Create HTML for analysis results display
@@ -238,10 +306,10 @@ function createResultsHTML(result: AnalysisResult): string {
       </div>
       
       <div class="result-actions">
-        <button class="action-button secondary" onclick="handleAnalyzeAgain()">
+        <button class="action-button secondary" id="analyze-again-btn">
           Analyze Again
         </button>
-        <button class="action-button secondary" onclick="handleShareResults()">
+        <button class="action-button secondary" id="share-results-btn">
           Share Results
         </button>
       </div>
@@ -297,13 +365,20 @@ function formatReasoning(reasoning: {
     .join('');
 }
 
-// Handle analyze button click with enhanced error recovery
+// Handle analyze button click with enhanced error recovery and progress feedback
 async function handleAnalyzeClick() {
   if (state.analysisStatus !== 'idle' && state.analysisStatus !== 'error' && state.analysisStatus !== 'complete') {
     return; // Already processing
   }
 
   try {
+    // Reset any previous analysis state
+    if (state.analysisStatus === 'error' || state.analysisStatus === 'complete') {
+      // Brief transition to idle state for visual feedback
+      updateUIState('idle');
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
     updateUIState('extracting');
 
     // Get current active tab
@@ -313,19 +388,57 @@ async function handleAnalyzeClick() {
       return;
     }
 
-    // Extract content from page using content script
+    // Store current URL for reference
+    state.currentUrl = tab.url || '';
+    if (pageUrl) {
+      pageUrl.textContent = truncateUrl(state.currentUrl);
+    }
+
+    // Show initial progress animation
+    if (progressBar) {
+      progressBar.classList.add('indeterminate');
+    }
+    
+    // Extract content from page using content script with timeout handling
     let extractionResult;
     try {
-      extractionResult = await browser.tabs.sendMessage(tab.id, {
-        action: 'extract-content-for-analysis'
+      // Create a promise that rejects after a timeout
+      const extractionTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Content extraction timed out')), 15000);
       });
+      
+      // Race the extraction against the timeout
+      extractionResult = await Promise.race([
+        browser.tabs.sendMessage(tab.id, {
+          action: 'extract-content-for-analysis'
+        }),
+        extractionTimeout
+      ]);
+      
+      // Update progress after successful extraction
+      updateProgress(40, 'Content extracted successfully');
+      
+      // Show brief success message
+      showTransitionFeedback('Content extracted successfully');
+      
     } catch (error) {
       console.error('Content extraction failed:', error);
-      showError(
-        'Content Extraction Failed',
-        'Unable to extract content from this page. The page may not support content extraction or may be loading.',
-        'extraction_failed'
-      );
+      
+      // Check if it's a timeout error
+      const err = error as Error;
+      if (err.message === 'Content extraction timed out') {
+        showError(
+          'Extraction Timeout',
+          'Content extraction took too long. The page may be too large or complex.',
+          'extraction_timeout'
+        );
+      } else {
+        showError(
+          'Content Extraction Failed',
+          'Unable to extract content from this page. The page may not support content extraction or may be loading.',
+          'extraction_failed'
+        );
+      }
       return;
     }
 
@@ -338,34 +451,72 @@ async function handleAnalyzeClick() {
       return;
     }
 
+    // Update UI to analyzing state with smooth transition
     updateUIState('analyzing');
+    
+    // Switch from indeterminate to determinate progress
+    if (progressBar) {
+      progressBar.classList.remove('indeterminate');
+    }
+    
+    // Update progress to show we're starting analysis
+    updateProgress(60, 'Analyzing content for credibility...');
 
-    // Send to background script for analysis with tab ID
-    const analysisResult = await browser.runtime.sendMessage({
-      action: 'analyze-content',
-      tabId: tab.id, // Include tab ID in the message
-      data: {
-        content: extractionResult.content,
-        url: extractionResult.url,
-        title: extractionResult.title,
-        contentType: extractionResult.contentType || 'article'
-      }
-    });
+    // Send to background script for analysis with tab ID and cancellation support
+    try {
+      const analysisResult = await browser.runtime.sendMessage({
+        action: 'analyze-content',
+        tabId: tab.id, // Include tab ID in the message
+        data: {
+          content: extractionResult.content,
+          url: extractionResult.url,
+          title: extractionResult.title,
+          contentType: extractionResult.contentType || 'article'
+        }
+      });
 
-    if (analysisResult.success) {
-      // Check if this is a fallback result and inform user
-      if (analysisResult.data.confidence <= 30 && analysisResult.data.reasoning.includes('Fallback analysis')) {
-        updateStatus('Analysis completed with limited service - results may be less accurate');
+      if (analysisResult.success) {
+        // Update progress to show completion
+        updateProgress(100, 'Analysis complete');
+        
+        // Check if this is a fallback result and inform user
+        if (analysisResult.data.confidence <= 30) {
+          const reasoningStr = JSON.stringify(analysisResult.data.reasoning);
+          if (reasoningStr && reasoningStr.includes('Fallback analysis')) {
+            updateStatus('Analysis completed with limited service - results may be less accurate');
+          } else {
+            // Show success animation
+            showSuccessFeedback('Analysis complete');
+          }
+        } else {
+          // Show success animation
+          showSuccessFeedback('Analysis complete');
+        }
+        
+        // Show results with highlight animation
+        showResults(analysisResult.data);
+      } else {
+        const error = analysisResult.error;
+        const errorType = error?.type || 'analysis_failed';
+        const errorMessage = error?.message || 'Analysis failed. Please try again.';
+        const suggestedAction = error?.suggestedAction;
+        
+        // Provide more specific error handling based on error type
+        handleAnalysisError(errorType, errorMessage, suggestedAction, error?.retryable);
       }
-      showResults(analysisResult.data);
-    } else {
-      const error = analysisResult.error;
-      const errorType = error?.type || 'analysis_failed';
-      const errorMessage = error?.message || 'Analysis failed. Please try again.';
-      const suggestedAction = error?.suggestedAction;
+    } catch (error) {
+      // Check if this was a user-initiated cancellation
+      if (state.analysisStatus === 'idle') {
+        // User already cancelled, no need to show error
+        return;
+      }
       
-      // Provide more specific error handling based on error type
-      handleAnalysisError(errorType, errorMessage, suggestedAction, error?.retryable);
+      console.error('Analysis failed:', error);
+      showError(
+        'Analysis Error',
+        'An unexpected error occurred during analysis. Please try again.',
+        'unexpected_error'
+      );
     }
 
   } catch (error) {
@@ -503,55 +654,179 @@ function handleShareResults() {
 
 // Progress tracking variables
 let progressTimer: number | null = null;
+let timeoutTimer: number | null = null;
+const SHORT_TIMEOUT = 30000; // 30 seconds
+const LONG_TIMEOUT = 60000; // 60 seconds
 
-// Update progress indicator
+// Update progress indicator with enhanced visual feedback
 function updateProgress(percentage: number, message: string) {
   if (progressFill) {
+    // Use smooth animation for progress updates
     progressFill.style.width = `${percentage}%`;
   }
+  
   if (progressText) {
-    progressText.textContent = message;
+    // Animate text change
+    progressText.style.opacity = '0';
+    
+    setTimeout(() => {
+      progressText.textContent = message;
+      progressText.style.opacity = '1';
+    }, 200);
   }
 }
 
-// Start progress timer
+// Start progress timer with warning indicators
 function startProgressTimer() {
   if (progressTimer) {
     clearInterval(progressTimer);
   }
+  
+  if (timeoutTimer) {
+    clearTimeout(timeoutTimer);
+  }
+  
+  // Set up timeout warning and auto-cancellation
+  setupTimeoutHandling();
   
   progressTimer = window.setInterval(() => {
     if (state.analysisStartTime && progressTime) {
       const elapsed = Math.floor((Date.now() - state.analysisStartTime) / 1000);
       progressTime.textContent = `${elapsed}s`;
       
-      // Auto-timeout after 60 seconds
-      if (elapsed >= 60) {
-        handleCancelClick();
-        showError(
-          'Analysis Timeout', 
-          'The analysis is taking too long and has been cancelled.', 
-          'timeout'
-        );
+      // Add warning class when approaching timeout
+      if (elapsed >= 20) {
+        progressTime.classList.add('warning');
+      } else {
+        progressTime.classList.remove('warning');
       }
     }
   }, 1000);
 }
 
-// Stop progress timer
+// Stop progress timer and clear timeout
 function stopProgressTimer() {
   if (progressTimer) {
     clearInterval(progressTimer);
     progressTimer = null;
   }
+  
+  if (timeoutTimer) {
+    clearTimeout(timeoutTimer);
+    timeoutTimer = null;
+  }
+  
+  // Reset progress time display
+  if (progressTime) {
+    progressTime.classList.remove('warning');
+  }
 }
 
-// Handle cancel button click
+// Set up timeout handling with user notifications
+function setupTimeoutHandling() {
+  // First timeout: Warning notification
+  setTimeout(() => {
+    if (state.analysisStatus === 'extracting' || state.analysisStatus === 'analyzing') {
+      // Show warning notification
+      showTimeoutWarning();
+    }
+  }, SHORT_TIMEOUT - 5000); // 5 seconds before short timeout
+  
+  // Short timeout: Consider showing partial results
+  setTimeout(() => {
+    if (state.analysisStatus === 'analyzing') {
+      // If in analyzing phase for too long, show notification
+      updateStatus('Analysis is taking longer than expected...');
+    }
+  }, SHORT_TIMEOUT);
+  
+  // Final timeout: Auto-cancel
+  timeoutTimer = window.setTimeout(() => {
+    if (state.analysisStatus === 'extracting' || state.analysisStatus === 'analyzing') {
+      handleCancelClick();
+      showError(
+        'Analysis Timeout', 
+        'The analysis took too long and was automatically cancelled. Try with shorter content or try again later.', 
+        'timeout'
+      );
+    }
+  }, LONG_TIMEOUT);
+}
+
+// Show timeout warning with option to continue or cancel
+function showTimeoutWarning() {
+  // Create warning element
+  const warningElement = document.createElement('div');
+  warningElement.className = 'timeout-warning';
+  warningElement.innerHTML = `
+    <div class="warning-message">
+      <span>Analysis is taking longer than expected</span>
+      <button class="continue-button">Continue</button>
+    </div>
+  `;
+  
+  // Add to progress container
+  if (progressContainer) {
+    progressContainer.appendChild(warningElement);
+    
+    // Add show class after a small delay for animation
+    setTimeout(() => {
+      warningElement.classList.add('show');
+    }, 10);
+    
+    // Add event listener to continue button
+    const continueButton = warningElement.querySelector('.continue-button');
+    if (continueButton) {
+      continueButton.addEventListener('click', () => {
+        // Remove warning and extend timeout
+        warningElement.classList.remove('show');
+        setTimeout(() => {
+          if (progressContainer.contains(warningElement)) {
+            progressContainer.removeChild(warningElement);
+          }
+        }, 300);
+        
+        // Reset timeout timer to give more time
+        if (timeoutTimer) {
+          clearTimeout(timeoutTimer);
+          timeoutTimer = window.setTimeout(() => {
+            if (state.analysisStatus === 'extracting' || state.analysisStatus === 'analyzing') {
+              handleCancelClick();
+              showError(
+                'Analysis Timeout', 
+                'The analysis took too long and was automatically cancelled.', 
+                'timeout'
+              );
+            }
+          }, LONG_TIMEOUT);
+        }
+      });
+    }
+    
+    // Auto-remove after 10 seconds if not clicked
+    setTimeout(() => {
+      if (progressContainer.contains(warningElement)) {
+        warningElement.classList.remove('show');
+        setTimeout(() => {
+          if (progressContainer.contains(warningElement)) {
+            progressContainer.removeChild(warningElement);
+          }
+        }, 300);
+      }
+    }, 10000);
+  }
+}
+
+// Handle cancel button click with enhanced user feedback
 async function handleCancelClick() {
   if (!state.canCancel) {
     return;
   }
 
+  // Show cancellation in progress feedback
+  cancelBtn.disabled = true;
+  cancelBtn.textContent = 'Cancelling...';
+  
   try {
     // Send cancellation message to background script
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
@@ -565,9 +840,38 @@ async function handleCancelClick() {
     console.warn('Failed to cancel analysis:', error);
   }
 
-  // Reset UI state
+  // Reset UI state with cancellation feedback
   updateUIState('idle');
-  updateStatus('Analysis cancelled');
+  updateStatus('Analysis cancelled by user');
+  
+  // Show brief cancellation message
+  const feedbackElement = document.createElement('div');
+  feedbackElement.className = 'cancellation-feedback';
+  feedbackElement.textContent = 'Analysis cancelled';
+  
+  // Add to analyze section
+  const analyzeSection = document.querySelector('.analyze-section');
+  if (analyzeSection) {
+    analyzeSection.appendChild(feedbackElement);
+    
+    // Animate and remove
+    setTimeout(() => {
+      feedbackElement.classList.add('show');
+      
+      setTimeout(() => {
+        feedbackElement.classList.remove('show');
+        setTimeout(() => {
+          if (analyzeSection.contains(feedbackElement)) {
+            analyzeSection.removeChild(feedbackElement);
+          }
+        }, 300);
+      }, 2000);
+    }, 10);
+  }
+  
+  // Reset cancel button
+  cancelBtn.disabled = false;
+  cancelBtn.textContent = 'Cancel';
 }
 
 // Enhanced timeout handling with user feedback
@@ -584,6 +888,70 @@ function setupAnalysisTimeout(timeoutMs: number = 30000) {
   }, timeoutMs);
 }
 
+// Update progress stages indicator
+function updateProgressStages(currentStatus: PopupState['analysisStatus']) {
+  // Get all stage elements
+  const stageExtract = document.getElementById('stage-extract');
+  const stageAnalyze = document.getElementById('stage-analyze');
+  const stageComplete = document.getElementById('stage-complete');
+  
+  if (!stageExtract || !stageAnalyze || !stageComplete) return;
+  
+  // Reset all stages
+  [stageExtract, stageAnalyze, stageComplete].forEach(stage => {
+    stage.classList.remove('active', 'completed');
+  });
+  
+  // Update stages based on current status
+  switch (currentStatus) {
+    case 'extracting':
+      stageExtract.classList.add('active');
+      break;
+    case 'analyzing':
+      stageExtract.classList.add('completed');
+      stageAnalyze.classList.add('active');
+      break;
+    case 'complete':
+      stageExtract.classList.add('completed');
+      stageAnalyze.classList.add('completed');
+      stageComplete.classList.add('completed');
+      break;
+    case 'error':
+      // Don't update stages on error
+      break;
+    default:
+      // Reset for idle state
+      break;
+  }
+}
+
+// Show transition feedback between stages
+function showTransitionFeedback(message: string) {
+  // Create a temporary feedback element
+  const feedbackElement = document.createElement('div');
+  feedbackElement.className = 'transition-feedback';
+  feedbackElement.textContent = message;
+  
+  // Add to progress container
+  if (progressContainer) {
+    progressContainer.appendChild(feedbackElement);
+    
+    // Animate and remove
+    setTimeout(() => {
+      feedbackElement.classList.add('show');
+      
+      setTimeout(() => {
+        feedbackElement.classList.remove('show');
+        setTimeout(() => {
+          if (progressContainer.contains(feedbackElement)) {
+            progressContainer.removeChild(feedbackElement);
+          }
+        }, 300);
+      }, 1500);
+    }, 10);
+  }
+}
+
 // Success feedback with animation
 function showSuccessFeedback(message: string) {
   updateStatus(message);
@@ -594,6 +962,76 @@ function showSuccessFeedback(message: string) {
     setTimeout(() => {
       statusMessage.classList.remove('success-feedback');
     }, 2000);
+  }
+}
+
+// Truncate URL for display
+function truncateUrl(url: string): string {
+  if (!url) return '';
+  
+  try {
+    const urlObj = new URL(url);
+    let displayUrl = urlObj.hostname + urlObj.pathname;
+    
+    // Truncate if too long
+    if (displayUrl.length > 40) {
+      displayUrl = displayUrl.substring(0, 37) + '...';
+    }
+    
+    return displayUrl;
+  } catch (e) {
+    // If URL parsing fails, just truncate the string
+    return url.length > 40 ? url.substring(0, 37) + '...' : url;
+  }
+}
+
+// Setup interactive elements in the results display
+function setupResultInteractions() {
+  // Add expandable sections for reasoning content
+  const reasoningSections = document.querySelectorAll('.reasoning-subsection');
+  reasoningSections.forEach((element) => {
+    const section = element as HTMLElement;
+    const header = section.querySelector('.reasoning-subheader') as HTMLElement | null;
+    const content = section.querySelector('ul') as HTMLElement | null;
+    
+    if (header && content) {
+      // Make headers clickable for expand/collapse
+      header.classList.add('expandable');
+      
+      // Add click handler
+      header.addEventListener('click', () => {
+        content.classList.toggle('collapsed');
+        header.classList.toggle('expanded');
+        
+        // Add highlight animation when expanding
+        if (!content.classList.contains('collapsed')) {
+          content.classList.add('highlight-animation');
+          setTimeout(() => {
+            content.classList.remove('highlight-animation');
+          }, 1000);
+        }
+      });
+      
+      // Initialize as expanded
+      header.classList.add('expanded');
+    }
+  });
+  
+  // Add event listeners to action buttons
+  const analyzeAgainBtn = document.getElementById('analyze-again-btn');
+  if (analyzeAgainBtn) {
+    analyzeAgainBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      handleAnalyzeAgain();
+    });
+  }
+  
+  const shareResultsBtn = document.getElementById('share-results-btn');
+  if (shareResultsBtn) {
+    shareResultsBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      handleShareResults();
+    });
   }
 }
 

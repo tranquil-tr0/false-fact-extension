@@ -179,6 +179,12 @@ body {
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Progress Bar */
@@ -188,13 +194,14 @@ body {
   background-color: var(--bg-tertiary);
   border-radius: 3px;
   overflow: hidden;
+  position: relative;
 }
 
 .progress-fill {
   height: 100%;
   background-color: var(--primary-color);
   border-radius: 3px;
-  transition: width 0.3s ease;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
 
@@ -214,6 +221,18 @@ body {
   animation: shimmer 2s infinite;
 }
 
+/* Indeterminate progress animation for initial loading */
+.progress-bar.indeterminate .progress-fill {
+  width: 50% !important;
+  animation: indeterminateProgress 1.5s infinite cubic-bezier(0.65, 0.05, 0.36, 1);
+}
+
+@keyframes indeterminateProgress {
+  0% { transform: translateX(-100%); }
+  60% { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
+}
+
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
@@ -224,6 +243,19 @@ body {
   font-size: 12px;
   color: var(--text-secondary);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-text.pulsing {
+  animation: textPulse 2s infinite;
+}
+
+@keyframes textPulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
 }
 
 .progress-time {
@@ -231,6 +263,49 @@ body {
   color: var(--text-muted);
   text-align: right;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  transition: color 0.3s ease;
+}
+
+.progress-time.warning {
+  color: var(--warning-color);
+  font-weight: 600;
+}
+
+/* Progress stages indicator */
+.progress-stages {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding: 0 2px;
+}
+
+.progress-stage {
+  font-size: 10px;
+  color: var(--text-muted);
+  position: relative;
+  padding-top: 12px;
+}
+
+.progress-stage::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--bg-tertiary);
+  transition: background-color 0.3s ease;
+}
+
+.progress-stage.active::before {
+  background-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+.progress-stage.completed::before {
+  background-color: var(--success-color);
 }
 
 /* Success Feedback Animation */
@@ -252,6 +327,105 @@ body {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* Transition Feedback */
+.transition-feedback {
+  background-color: var(--success-color);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 8px;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  text-align: center;
+}
+
+.transition-feedback.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Timeout Warning */
+.timeout-warning {
+  margin-top: 8px;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.timeout-warning.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Cancellation Feedback */
+.cancellation-feedback {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 8px;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.cancellation-feedback.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.warning-message {
+  background-color: var(--warning-color);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.continue-button {
+  background-color: white;
+  color: var(--warning-color);
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.continue-button:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Results animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Highlight animation for result sections */
+.highlight-animation {
+  animation: highlightPulse 1s ease-out;
+}
+
+@keyframes highlightPulse {
+  0% { background-color: transparent; }
+  30% { background-color: rgba(79, 70, 229, 0.1); }
+  100% { background-color: transparent; }
 }
 
 /* Results Section */
@@ -486,6 +660,68 @@ body {
 
 .reasoning-content p:last-child {
   margin-bottom: 0;
+}
+
+/* Expandable reasoning sections */
+.reasoning-subsection {
+  margin-bottom: 12px;
+}
+
+.reasoning-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.reasoning-subheader {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  cursor: default;
+}
+
+.reasoning-subheader.expandable {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.reasoning-subheader.expandable::after {
+  content: '▼';
+  font-size: 10px;
+  margin-left: 6px;
+  transition: transform 0.2s ease;
+  color: var(--text-secondary);
+}
+
+.reasoning-subheader.expandable.expanded::after {
+  transform: rotate(180deg);
+}
+
+.reasoning-subsection ul {
+  margin: 0;
+  padding-left: 20px;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  max-height: 500px;
+  opacity: 1;
+  overflow: hidden;
+}
+
+.reasoning-subsection ul.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+}
+
+.reasoning-subsection li {
+  margin-bottom: 4px;
+}
+
+/* Action button click animation */
+.action-button.clicked {
+  transform: scale(0.95);
+  opacity: 0.8;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 /* Result Actions */
