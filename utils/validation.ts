@@ -151,8 +151,8 @@ export function parseAnalysisResponse(content: string): AnalysisApiResponse {
       );
     }
 
-    const { fact, opinion, false: falseValue } = parsed.categories;
-    if (typeof fact !== 'number' || typeof opinion !== 'number' || typeof falseValue !== 'number') {
+    const { fact, opinion } = parsed.categories;
+    if (typeof fact !== 'number' || typeof opinion !== 'number') {
       throw new ExtensionError(
         AnalysisErrorType.API_UNAVAILABLE,
         'Invalid category values in response',
@@ -161,7 +161,7 @@ export function parseAnalysisResponse(content: string): AnalysisApiResponse {
       );
     }
 
-    if (fact < 0 || fact > 100 || opinion < 0 || opinion > 100 || falseValue < 0 || falseValue > 100) {
+    if (fact < 0 || fact > 100 || opinion < 0 || opinion > 100) {
       throw new ExtensionError(
         AnalysisErrorType.API_UNAVAILABLE,
         'Category values out of range',
