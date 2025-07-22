@@ -208,7 +208,6 @@ export class PollinationsService {
     try {
       // First try to parse as JSON if the response is in JSON format
       const jsonResponse = JSON.parse(responseText);
-      console.log("Pollinations.ai parsed JSON response:", JSON.stringify(jsonResponse, null, 2));
       return parseAnalysisResponse(jsonResponse);
     } catch (e) {
       // If not valid JSON, treat as plain text
