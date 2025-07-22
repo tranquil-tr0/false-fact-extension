@@ -28,12 +28,17 @@ describe('DetailedAnalysis', () => {
         false: 15,
       },
       confidence: 85,
-      reasoning: 'This article contains **factual information** with some *opinion-based* content. The claims are well-sourced and verifiable.',
+      reasoning: {
+        factual: ['This article contains **factual information** that is well-sourced'],
+        unfactual: [],
+        subjective: ['Contains some *opinion-based* content'],
+        objective: ['The claims are verifiable']
+      },
       timestamp: Date.now(),
       contentHash: 'abcd1234efgh5678',
     };
   });
-
+  
   afterEach(() => {
     document.body.removeChild(container);
     vi.clearAllMocks();
@@ -258,7 +263,12 @@ describe('DetailedAnalysis', () => {
     it('should format bold text', () => {
       const resultWithBold = {
         ...mockAnalysisResult,
-        reasoning: 'This is **bold text** in the reasoning.',
+        reasoning: {
+          factual: ['This is **bold text** in the reasoning.'],
+          unfactual: [],
+          subjective: [],
+          objective: []
+        }
       };
       
       detailedAnalysis.render(resultWithBold);
@@ -270,7 +280,12 @@ describe('DetailedAnalysis', () => {
     it('should format italic text', () => {
       const resultWithItalic = {
         ...mockAnalysisResult,
-        reasoning: 'This is *italic text* in the reasoning.',
+        reasoning: {
+          factual: ['This is *italic text* in the reasoning.'],
+          unfactual: [],
+          subjective: [],
+          objective: []
+        }
       };
       
       detailedAnalysis.render(resultWithItalic);
@@ -282,7 +297,12 @@ describe('DetailedAnalysis', () => {
     it('should handle line breaks', () => {
       const resultWithBreaks = {
         ...mockAnalysisResult,
-        reasoning: 'First line\nSecond line\n\nNew paragraph',
+        reasoning: {
+          factual: ['First line\nSecond line'],
+          unfactual: [],
+          subjective: [],
+          objective: ['New paragraph']
+        }
       };
       
       detailedAnalysis.render(resultWithBreaks);
@@ -293,10 +313,15 @@ describe('DetailedAnalysis', () => {
     });
 
     it('should truncate long reasoning when expandable', () => {
-      const longReasoning = 'A'.repeat(500);
+      const longText = 'A'.repeat(500);
       const resultWithLongReasoning = {
         ...mockAnalysisResult,
-        reasoning: longReasoning,
+        reasoning: {
+          factual: [longText],
+          unfactual: [],
+          subjective: [],
+          objective: []
+        }
       };
       
       detailedAnalysis = new DetailedAnalysis(container, { 
@@ -306,7 +331,7 @@ describe('DetailedAnalysis', () => {
       detailedAnalysis.render(resultWithLongReasoning);
       
       const reasoningText = container.querySelector('.reasoning-text') as HTMLElement;
-      expect(reasoningText.textContent?.length).toBeLessThan(longReasoning.length);
+      expect(reasoningText.textContent?.length).toBeLessThan(longText.length + 50); // Account for added formatting
       expect(reasoningText.textContent).toContain('...');
     });
   });

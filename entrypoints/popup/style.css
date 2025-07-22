@@ -13,20 +13,25 @@
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 
-  /* Color variables */
-  --primary-color: #4f46e5;
-  --primary-hover: #4338ca;
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --error-color: #ef4444;
-  --text-primary: rgba(255, 255, 255, 0.87);
-  --text-secondary: rgba(255, 255, 255, 0.6);
-  --text-muted: rgba(255, 255, 255, 0.4);
+  /* Color variables - with improved contrast ratios */
+  --primary-color: #5e54e6; /* Slightly lighter for better contrast */
+  --primary-hover: #4f46e5;
+  --success-color: #10b981; /* Good contrast on dark backgrounds */
+  --warning-color: #f59e0b; /* Good contrast on dark backgrounds */
+  --error-color: #ef4444; /* Good contrast on dark backgrounds */
+  --text-primary: rgba(255, 255, 255, 0.9); /* Increased contrast */
+  --text-secondary: rgba(255, 255, 255, 0.7); /* Increased contrast */
+  --text-muted: rgba(255, 255, 255, 0.5); /* Increased contrast */
   --bg-primary: #1a1a1a;
   --bg-secondary: #2d2d2d;
   --bg-tertiary: #3d3d3d;
-  --border-color: rgba(255, 255, 255, 0.1);
-  --border-hover: rgba(255, 255, 255, 0.2);
+  --border-color: rgba(255, 255, 255, 0.15); /* Increased contrast */
+  --border-hover: rgba(255, 255, 255, 0.25); /* Increased contrast */
+  
+  /* Focus styles for keyboard navigation */
+  --focus-outline-color: #ffffff;
+  --focus-outline-width: 2px;
+  --focus-outline-offset: 2px;
 }
 
 * {
@@ -778,5 +783,129 @@ body {
   .error-message {
     background-color: rgba(239, 68, 68, 0.05);
     border-color: rgba(239, 68, 68, 0.2);
+  }
+}
+/* Accessibility Enhancements */
+
+/* Focus styles for keyboard navigation */
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: var(--focus-outline-offset);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+/* Skip to content link for keyboard users */
+.skip-to-content {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--primary-color);
+  color: white;
+  padding: 8px;
+  z-index: 100;
+  transition: top 0.3s;
+}
+
+.skip-to-content:focus {
+  top: 0;
+}
+
+/* High contrast mode */
+@media (forced-colors: active) {
+  :root {
+    --primary-color: CanvasText;
+    --primary-hover: Highlight;
+    --success-color: CanvasText;
+    --warning-color: CanvasText;
+    --error-color: CanvasText;
+    --border-color: CanvasText;
+    --border-hover: Highlight;
+  }
+  
+  /* Ensure all interactive elements have visible borders */
+  button, 
+  .analyze-button,
+  .cancel-button,
+  .retry-button,
+  .help-button,
+  .action-button {
+    border: 1px solid CanvasText;
+  }
+  
+  /* Ensure progress bars are visible */
+  .progress-bar {
+    border: 1px solid CanvasText;
+  }
+  
+  .progress-fill {
+    background-color: Highlight;
+  }
+  
+  /* Ensure category bars are distinguishable */
+  .category-fill.fact {
+    background-color: Highlight;
+    background-image: linear-gradient(45deg, Highlight 25%, transparent 25%, transparent 50%, Highlight 50%, Highlight 75%, transparent 75%, transparent);
+    background-size: 10px 10px;
+  }
+  
+  .category-fill.opinion {
+    background-color: Highlight;
+    background-image: linear-gradient(90deg, Highlight 50%, transparent 50%);
+    background-size: 10px 10px;
+  }
+  
+  .category-fill.false {
+    background-color: Highlight;
+    background-image: linear-gradient(135deg, Highlight 25%, transparent 25%, transparent 50%, Highlight 50%, Highlight 75%, transparent 75%, transparent);
+    background-size: 10px 10px;
+  }
+  
+  /* Ensure text remains readable */
+  .text-primary, .text-secondary, .text-muted {
+    color: CanvasText;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .progress-fill::after {
+    animation: none !important;
+  }
+  
+  .progress-bar.indeterminate .progress-fill {
+    animation: none !important;
+    width: 50% !important;
+  }
+}
+
+/* Text size adjustments for accessibility */
+@media (prefers-increased-contrast) {
+  body {
+    line-height: 1.7;
+  }
+  
+  .analyze-button,
+  .cancel-button,
+  .retry-button,
+  .help-button,
+  .action-button {
+    padding: 12px 24px;
+  }
+  
+  .category-bar {
+    height: 12px;
   }
 }

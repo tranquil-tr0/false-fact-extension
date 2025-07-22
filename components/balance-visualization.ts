@@ -32,32 +32,34 @@ export class BalanceVisualization {
 
   private initializeContainer(): void {
     this.container.className = 'balance-visualization';
+    this.container.setAttribute('role', 'region');
+    this.container.setAttribute('aria-label', 'Credibility Analysis Visualization');
     this.container.innerHTML = `
       <div class="balance-header">
-        <h3>Credibility Analysis</h3>
+        <h3 id="balance-visualization-title">Credibility Analysis</h3>
       </div>
       <div class="balance-bar-container">
-        <div class="balance-bar">
-          <div class="balance-segment fact-segment" data-category="fact">
+        <div class="balance-bar" role="group" aria-labelledby="balance-visualization-title">
+          <div class="balance-segment fact-segment" data-category="fact" role="meter" aria-label="Factual content percentage" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
             <span class="segment-label">Fact</span>
             <span class="segment-percentage">0%</span>
           </div>
-          <div class="balance-segment opinion-segment" data-category="opinion">
+          <div class="balance-segment opinion-segment" data-category="opinion" role="meter" aria-label="Opinion content percentage" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
             <span class="segment-label">Opinion</span>
             <span class="segment-percentage">0%</span>
           </div>
-          <div class="balance-segment false-segment" data-category="false">
+          <div class="balance-segment false-segment" data-category="false" role="meter" aria-label="False content percentage" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
             <span class="segment-label">False</span>
             <span class="segment-percentage">0%</span>
           </div>
         </div>
       </div>
       <div class="credibility-score">
-        <div class="score-label">Overall Credibility</div>
-        <div class="score-value">--</div>
+        <div class="score-label" id="credibility-score-label">Overall Credibility</div>
+        <div class="score-value" role="meter" aria-labelledby="credibility-score-label" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">--</div>
         <div class="confidence-indicator">
-          <span class="confidence-label">Confidence:</span>
-          <span class="confidence-value">--</span>
+          <span class="confidence-label" id="confidence-label">Confidence:</span>
+          <span class="confidence-value" role="meter" aria-labelledby="confidence-label" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">--</span>
         </div>
       </div>
     `;
@@ -85,6 +87,9 @@ export class BalanceVisualization {
     const percentageElement = segment.querySelector('.segment-percentage') as HTMLElement;
     const labelElement = segment.querySelector('.segment-label') as HTMLElement;
 
+    // Update ARIA attributes for accessibility
+    segment.setAttribute('aria-valuenow', Math.round(percentage).toString());
+    
     if (this.options.animated) {
       // Animate width change
       segment.style.transition = `width ${this.animationDuration}ms ease-out`;
@@ -98,10 +103,16 @@ export class BalanceVisualization {
     // Set width as percentage of total
     segment.style.width = `${percentage}%`;
     
-    // Hide label and percentage if segment is too small
+    // Hide label and percentage if segment is too small, but keep accessible for screen readers
     const shouldHideText = percentage < 15;
     labelElement.style.opacity = shouldHideText ? '0' : '1';
     percentageElement.style.opacity = shouldHideText ? '0' : '1';
+    
+    // Even if visually hidden, ensure screen readers can access the information
+    if (shouldHideText) {
+      const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+      segment.setAttribute('aria-label', `${categoryName} content: ${Math.round(percentage)}%`);
+    }
   }
 
   private animatePercentage(element: HTMLElement, targetPercentage: number): void {
@@ -131,6 +142,10 @@ export class BalanceVisualization {
     const scoreElement = this.container.querySelector('.score-value') as HTMLElement;
     const confidenceElement = this.container.querySelector('.confidence-value') as HTMLElement;
 
+    // Update ARIA attributes for accessibility
+    scoreElement.setAttribute('aria-valuenow', Math.round(score).toString());
+    confidenceElement.setAttribute('aria-valuenow', Math.round(confidence).toString());
+
     if (this.options.animated) {
       this.animateScore(scoreElement, score);
       this.animateScore(confidenceElement, confidence, '%');
@@ -138,6 +153,20 @@ export class BalanceVisualization {
       scoreElement.textContent = `${Math.round(score)}/100`;
       confidenceElement.textContent = `${Math.round(confidence)}%`;
     }
+    
+    // Add a descriptive label for screen readers based on credibility level
+    let credibilityDescription = '';
+    if (score >= 80) {
+      credibilityDescription = 'High credibility';
+    } else if (score >= 60) {
+      credibilityDescription = 'Moderate credibility';
+    } else if (score >= 40) {
+      credibilityDescription = 'Low credibility';
+    } else {
+      credibilityDescription = 'Very low credibility';
+    }
+    
+    scoreElement.setAttribute('aria-label', `Overall credibility score: ${Math.round(score)} out of 100. ${credibilityDescription}`);
   }
 
   private animateScore(element: HTMLElement, targetValue: number, suffix: string = '/100'): void {

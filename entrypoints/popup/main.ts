@@ -1,5 +1,13 @@
 import './style.css';
 import type { AnalysisResult } from '../../types/index.js';
+import { 
+  registerKeyboardShortcuts, 
+  announceToScreenReader, 
+  showKeyboardShortcutsHelp,
+  createSkipLink,
+  enhanceForHighContrast,
+  type KeyboardShortcut
+} from '../../utils/accessibility.js';
 
 // Ensure browser API is available
 declare const browser: any;
@@ -869,7 +877,7 @@ async function handleCancelClick() {
     }, 10);
   }
   
-  // Reset cancel button
+  // Reset cancel button state
   cancelBtn.disabled = false;
   cancelBtn.textContent = 'Cancel';
 }
@@ -888,154 +896,12 @@ function setupAnalysisTimeout(timeoutMs: number = 30000) {
   }, timeoutMs);
 }
 
-// Update progress stages indicator
-function updateProgressStages(currentStatus: PopupState['analysisStatus']) {
-  // Get all stage elements
-  const stageExtract = document.getElementById('stage-extract');
-  const stageAnalyze = document.getElementById('stage-analyze');
-  const stageComplete = document.getElementById('stage-complete');
-  
-  if (!stageExtract || !stageAnalyze || !stageComplete) return;
-  
-  // Reset all stages
-  [stageExtract, stageAnalyze, stageComplete].forEach(stage => {
-    stage.classList.remove('active', 'completed');
-  });
-  
-  // Update stages based on current status
-  switch (currentStatus) {
-    case 'extracting':
-      stageExtract.classList.add('active');
-      break;
-    case 'analyzing':
-      stageExtract.classList.add('completed');
-      stageAnalyze.classList.add('active');
-      break;
-    case 'complete':
-      stageExtract.classList.add('completed');
-      stageAnalyze.classList.add('completed');
-      stageComplete.classList.add('completed');
-      break;
-    case 'error':
-      // Don't update stages on error
-      break;
-    default:
-      // Reset for idle state
-      break;
-  }
-}
 
-// Show transition feedback between stages
-function showTransitionFeedback(message: string) {
-  // Create a temporary feedback element
-  const feedbackElement = document.createElement('div');
-  feedbackElement.className = 'transition-feedback';
-  feedbackElement.textContent = message;
-  
-  // Add to progress container
-  if (progressContainer) {
-    progressContainer.appendChild(feedbackElement);
-    
-    // Animate and remove
-    setTimeout(() => {
-      feedbackElement.classList.add('show');
-      
-      setTimeout(() => {
-        feedbackElement.classList.remove('show');
-        setTimeout(() => {
-          if (progressContainer.contains(feedbackElement)) {
-            progressContainer.removeChild(feedbackElement);
-          }
-        }, 300);
-      }, 1500);
-    }, 10);
-  }
-}
 
-// Success feedback with animation
-function showSuccessFeedback(message: string) {
-  updateStatus(message);
-  
-  // Add success animation class if available
-  if (statusMessage) {
-    statusMessage.classList.add('success-feedback');
-    setTimeout(() => {
-      statusMessage.classList.remove('success-feedback');
-    }, 2000);
-  }
-}
 
-// Truncate URL for display
-function truncateUrl(url: string): string {
-  if (!url) return '';
-  
-  try {
-    const urlObj = new URL(url);
-    let displayUrl = urlObj.hostname + urlObj.pathname;
-    
-    // Truncate if too long
-    if (displayUrl.length > 40) {
-      displayUrl = displayUrl.substring(0, 37) + '...';
-    }
-    
-    return displayUrl;
-  } catch (e) {
-    // If URL parsing fails, just truncate the string
-    return url.length > 40 ? url.substring(0, 37) + '...' : url;
-  }
-}
 
-// Setup interactive elements in the results display
-function setupResultInteractions() {
-  // Add expandable sections for reasoning content
-  const reasoningSections = document.querySelectorAll('.reasoning-subsection');
-  reasoningSections.forEach((element) => {
-    const section = element as HTMLElement;
-    const header = section.querySelector('.reasoning-subheader') as HTMLElement | null;
-    const content = section.querySelector('ul') as HTMLElement | null;
-    
-    if (header && content) {
-      // Make headers clickable for expand/collapse
-      header.classList.add('expandable');
-      
-      // Add click handler
-      header.addEventListener('click', () => {
-        content.classList.toggle('collapsed');
-        header.classList.toggle('expanded');
-        
-        // Add highlight animation when expanding
-        if (!content.classList.contains('collapsed')) {
-          content.classList.add('highlight-animation');
-          setTimeout(() => {
-            content.classList.remove('highlight-animation');
-          }, 1000);
-        }
-      });
-      
-      // Initialize as expanded
-      header.classList.add('expanded');
-    }
-  });
-  
-  // Add event listeners to action buttons
-  const analyzeAgainBtn = document.getElementById('analyze-again-btn');
-  if (analyzeAgainBtn) {
-    analyzeAgainBtn.addEventListener('click', (event) => {
-      event.preventDefault();
-      handleAnalyzeAgain();
-    });
-  }
-  
-  const shareResultsBtn = document.getElementById('share-results-btn');
-  if (shareResultsBtn) {
-    shareResultsBtn.addEventListener('click', (event) => {
-      event.preventDefault();
-      handleShareResults();
-    });
-  }
-}
 
-// Event listeners
+// Initialize event listeners and accessibility features
 analyzeBtn.addEventListener('click', handleAnalyzeClick);
 cancelBtn.addEventListener('click', handleCancelClick);
 retryBtn.addEventListener('click', handleRetryClick);
@@ -1047,4 +913,295 @@ document.addEventListener('DOMContentLoaded', initializePopup);
 // Cleanup on popup close
 window.addEventListener('beforeunload', () => {
   stopProgressTimer();
+});
+
+// Setup keyboard shortcuts
+function setupKeyboardShortcuts() {
+  const shortcuts: KeyboardShortcut[] = [
+    {
+      key: 'a',
+      description: 'Analyze content',
+      action: () => {
+        if (analyzeBtn && !analyzeBtn.disabled) {
+          handleAnalyzeClick();
+        }
+      }
+    },
+    {
+      key: 'c',
+      description: 'Cancel analysis',
+      action: () => {
+        if (state.canCancel && cancelBtn && !cancelBtn.classList.contains('hidden')) {
+          handleCancelClick();
+        }
+      }
+    },
+    {
+      key: 'r',
+      description: 'Retry analysis',
+      action: () => {
+        if (state.analysisStatus === 'error') {
+          handleRetryClick();
+          handleAnalyzeClick();
+        }
+      }
+    },
+    {
+      key: 's',
+      description: 'Share results',
+      action: () => {
+        if (state.analysisStatus === 'complete' && state.analysisResult) {
+          handleShareResults();
+        }
+      }
+    },
+    {
+      key: 'h',
+      description: 'Show help',
+      action: () => {
+        showKeyboardShortcutsHelp(shortcuts);
+      },
+      modifier: 'alt'
+    },
+    {
+      key: 'Escape',
+      description: 'Cancel analysis or close dialogs',
+      action: () => {
+        if (state.canCancel) {
+          handleCancelClick();
+        }
+        // Close any open dialogs
+        const dialog = document.querySelector('.keyboard-shortcuts-help');
+        if (dialog) {
+          dialog.remove();
+        }
+      }
+    }
+  ];
+
+  registerKeyboardShortcuts(shortcuts);
+}
+
+// Update progress stages indicator with ARIA attributes
+function updateProgressStages(currentStatus: PopupState['analysisStatus']) {
+  // Get all stage elements
+  const stageExtract = document.getElementById('stage-extract');
+  const stageAnalyze = document.getElementById('stage-analyze');
+  const stageComplete = document.getElementById('stage-complete');
+  
+  // Reset all stages
+  [stageExtract, stageAnalyze, stageComplete].forEach(stage => {
+    if (stage) {
+      stage.classList.remove('active', 'completed');
+    }
+  });
+  
+  // Update stages based on current status
+  switch (currentStatus) {
+    case 'extracting':
+      if (stageExtract) {
+        stageExtract.classList.add('active');
+        stageExtract.setAttribute('aria-current', 'step');
+      }
+      break;
+      
+    case 'analyzing':
+      if (stageExtract) {
+        stageExtract.classList.add('completed');
+        stageExtract.removeAttribute('aria-current');
+      }
+      if (stageAnalyze) {
+        stageAnalyze.classList.add('active');
+        stageAnalyze.setAttribute('aria-current', 'step');
+      }
+      break;
+      
+    case 'complete':
+      if (stageExtract && stageAnalyze) {
+        stageExtract.classList.add('completed');
+        stageAnalyze.classList.add('completed');
+        stageExtract.removeAttribute('aria-current');
+        stageAnalyze.removeAttribute('aria-current');
+      }
+      if (stageComplete) {
+        stageComplete.classList.add('active', 'completed');
+        stageComplete.setAttribute('aria-current', 'step');
+      }
+      break;
+  }
+  
+  // Update ARIA attributes for progress container
+  if (progressContainer) {
+    // Update aria-valuenow based on status
+    let progressValue = 0;
+    switch (currentStatus) {
+      case 'extracting': progressValue = 20; break;
+      case 'analyzing': progressValue = 60; break;
+      case 'complete': progressValue = 100; break;
+    }
+    progressContainer.setAttribute('aria-valuenow', progressValue.toString());
+  }
+}
+
+// Show transition feedback with screen reader announcement
+function showTransitionFeedback(message: string) {
+  const feedbackElement = document.createElement('div');
+  feedbackElement.className = 'transition-feedback';
+  feedbackElement.textContent = message;
+  
+  // Add to analyze section
+  const analyzeSection = document.querySelector('.analyze-section');
+  if (analyzeSection) {
+    analyzeSection.appendChild(feedbackElement);
+    
+    // Animate and remove
+    setTimeout(() => {
+      feedbackElement.classList.add('show');
+      
+      // Announce to screen readers
+      announceToScreenReader(message);
+      
+      setTimeout(() => {
+        feedbackElement.classList.remove('show');
+        setTimeout(() => {
+          if (analyzeSection.contains(feedbackElement)) {
+            analyzeSection.removeChild(feedbackElement);
+          }
+        }, 300);
+      }, 2000);
+    }, 10);
+  }
+}
+
+// Show success feedback with screen reader announcement
+function showSuccessFeedback(message: string) {
+  statusMessage.textContent = message;
+  statusMessage.classList.add('success-feedback');
+  
+  // Announce to screen readers
+  announceToScreenReader(message, 'polite');
+  
+  setTimeout(() => {
+    statusMessage.classList.remove('success-feedback');
+  }, 2000);
+}
+
+// Truncate URL for display
+function truncateUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    let displayUrl = urlObj.hostname + urlObj.pathname;
+    if (displayUrl.length > 40) {
+      displayUrl = displayUrl.substring(0, 37) + '...';
+    }
+    return displayUrl;
+  } catch (e) {
+    return url.length > 40 ? url.substring(0, 37) + '...' : url;
+  }
+}
+
+// Setup result interactions with keyboard navigation
+function setupResultInteractions() {
+  // Add event listeners to expandable sections
+  const expandableSections = document.querySelectorAll('.reasoning-subheader.expandable');
+  expandableSections.forEach(section => {
+    section.addEventListener('click', () => {
+      const isExpanded = section.classList.contains('expanded');
+      section.classList.toggle('expanded');
+      section.setAttribute('aria-expanded', (!isExpanded).toString());
+      
+      const content = section.nextElementSibling as HTMLElement;
+      if (content && content.classList.contains('reasoning-content')) {
+        content.classList.toggle('collapsed');
+      }
+    });
+    
+    // Add keyboard support
+    section.setAttribute('tabindex', '0');
+    section.setAttribute('role', 'button');
+    section.setAttribute('aria-expanded', 'false');
+    
+    section.addEventListener('keydown', (e) => {
+      const ke = e as KeyboardEvent;
+      if (ke.key === 'Enter' || ke.key === ' ') {
+        ke.preventDefault();
+        (section as HTMLElement).click();
+      }
+    });
+  });
+  
+  // Add event listeners to action buttons
+  const analyzeAgainBtn = document.getElementById('analyze-again-btn');
+  const shareResultsBtn = document.getElementById('share-results-btn');
+  
+  if (analyzeAgainBtn) {
+    analyzeAgainBtn.addEventListener('click', () => {
+      analyzeAgainBtn.classList.add('clicked');
+      setTimeout(() => {
+        analyzeAgainBtn.classList.remove('clicked');
+        handleAnalyzeAgain();
+        handleAnalyzeClick();
+      }, 200);
+    });
+    
+    // Add keyboard accessibility
+    analyzeAgainBtn.setAttribute('aria-label', 'Analyze content again');
+  }
+  
+  if (shareResultsBtn) {
+    shareResultsBtn.addEventListener('click', () => {
+      shareResultsBtn.classList.add('clicked');
+      setTimeout(() => {
+        shareResultsBtn.classList.remove('clicked');
+        handleShareResults();
+      }, 200);
+    });
+    
+    // Add keyboard accessibility
+    shareResultsBtn.setAttribute('aria-label', 'Share analysis results');
+  }
+}
+
+// Add skip link for keyboard navigation
+function addSkipLink() {
+  const skipLink = createSkipLink('result-display', 'Skip to analysis results');
+  document.body.insertBefore(skipLink, document.body.firstChild);
+}
+
+// Initialize accessibility features
+function initializeAccessibility() {
+  // Add skip link for keyboard navigation
+  addSkipLink();
+  
+  // Setup keyboard shortcuts
+  setupKeyboardShortcuts();
+  
+  // Check for high contrast mode
+  enhanceForHighContrast();
+  
+  // Add screen reader announcer
+  const announcer = document.createElement('div');
+  announcer.id = 'screen-reader-announcer';
+  announcer.className = 'sr-only';
+  announcer.setAttribute('aria-live', 'polite');
+  announcer.setAttribute('aria-atomic', 'true');
+  document.body.appendChild(announcer);
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize popup
+  initializePopup();
+  
+  // Initialize accessibility features
+  initializeAccessibility();
+  
+  // Add event listeners
+  analyzeBtn.addEventListener('click', handleAnalyzeClick);
+  cancelBtn.addEventListener('click', handleCancelClick);
+  retryBtn.addEventListener('click', () => {
+    handleRetryClick();
+    handleAnalyzeClick();
+  });
+  helpBtn.addEventListener('click', handleHelpClick);
 });

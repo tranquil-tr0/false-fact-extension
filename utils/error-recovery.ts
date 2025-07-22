@@ -357,14 +357,44 @@ export class ErrorRecoveryService {
 
     /**
      * Creates a user-friendly error message with recovery suggestions
+     * @param plan - The error recovery plan
+     * @param includeAccessibilityInfo - Whether to include additional context for screen readers
+     * @returns A user-friendly error message
      */
-    createUserFriendlyMessage(plan: ErrorRecoveryPlan): string {
+    createUserFriendlyMessage(plan: ErrorRecoveryPlan, includeAccessibilityInfo: boolean = false): string {
         let message = plan.userMessage;
 
         if (plan.strategy === RecoveryStrategy.RETRY && plan.retryable) {
             message += ` ${plan.suggestedAction}`;
         } else if (plan.fallbackOptions && plan.fallbackOptions.length > 0) {
             message += ` You can try: ${plan.fallbackOptions.slice(0, 2).join(' or ')}.`;
+        }
+        
+        // Add additional context for screen readers if requested
+        if (includeAccessibilityInfo) {
+            let accessibilityContext = '';
+            
+            switch (plan.severity) {
+                case ErrorSeverity.LOW:
+                    accessibilityContext = 'This is a minor issue that should not affect functionality.';
+                    break;
+                case ErrorSeverity.MEDIUM:
+                    accessibilityContext = 'This issue may affect some functionality.';
+                    break;
+                case ErrorSeverity.HIGH:
+                    accessibilityContext = 'This is a significant issue that affects core functionality.';
+                    break;
+                case ErrorSeverity.FATAL:
+                    accessibilityContext = 'This is a critical issue that prevents the extension from working.';
+                    break;
+            }
+            
+            // Add keyboard shortcut information if applicable
+            if (plan.retryable) {
+                accessibilityContext += ' Press R to retry.';
+            }
+            
+            message += ` ${accessibilityContext}`;
         }
 
         return message;

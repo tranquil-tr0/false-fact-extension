@@ -28,79 +28,87 @@ export class DetailedAnalysis {
 
   private initializeContainer(): void {
     this.container.className = 'detailed-analysis';
+    this.container.setAttribute('role', 'region');
+    this.container.setAttribute('aria-label', 'Detailed Analysis Results');
+    
+    const expandId = `expand-toggle-${Math.random().toString(36).substring(2, 9)}`;
+    const detailsId = `analysis-details-${Math.random().toString(36).substring(2, 9)}`;
+    
     this.container.innerHTML = `
       <div class="analysis-summary">
         <div class="summary-header">
-          <h4>Analysis Details</h4>
-          ${this.options.expandable ? '<button class="expand-toggle" aria-expanded="false">Show Details</button>' : ''}
+          <h4 id="analysis-details-heading">Analysis Details</h4>
+          ${this.options.expandable ? 
+            `<button class="expand-toggle" id="${expandId}" aria-expanded="false" aria-controls="${detailsId}" accesskey="d">Show Details</button>` : 
+            ''}
         </div>
         <div class="confidence-overview">
           <div class="confidence-item">
-            <span class="confidence-label">Overall Confidence</span>
-            <div class="confidence-bar">
+            <span class="confidence-label" id="overall-confidence-label">Overall Confidence</span>
+            <div class="confidence-bar" role="meter" aria-labelledby="overall-confidence-label" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
               <div class="confidence-fill" style="width: 0%"></div>
               <span class="confidence-text">--</span>
             </div>
           </div>
         </div>
       </div>
-      <div class="analysis-details ${this.options.expandable ? 'collapsible' : ''}">
+      <div class="analysis-details ${this.options.expandable ? 'collapsible' : ''}" id="${detailsId}" ${this.options.expandable ? 'aria-hidden="true"' : ''} tabindex="${this.options.expandable ? '-1' : '0'}">
         <div class="reasoning-section">
-          <h5>Analysis Reasoning</h5>
-          <div class="reasoning-content">
+          <h5 id="reasoning-heading">Analysis Reasoning</h5>
+          <div class="reasoning-content" aria-labelledby="reasoning-heading">
             <p class="reasoning-text">No analysis available</p>
           </div>
         </div>
         <div class="category-breakdown">
-          <h5>Category Breakdown</h5>
-          <div class="category-details">
+          <h5 id="category-breakdown-heading">Category Breakdown</h5>
+          <div class="category-details" role="group" aria-labelledby="category-breakdown-heading">
             <div class="category-item fact-category">
               <div class="category-header">
-                <span class="category-name">Factual Content</span>
-                <span class="category-percentage">--</span>
+                <span class="category-name" id="fact-category-label">Factual Content</span>
+                <span class="category-percentage" aria-labelledby="fact-category-label">--</span>
               </div>
               <div class="category-confidence">
-                <div class="confidence-indicator">
+                <div class="confidence-indicator" role="meter" aria-label="Factual content confidence level" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                   <div class="confidence-dots">
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
                   </div>
                 </div>
               </div>
             </div>
             <div class="category-item opinion-category">
               <div class="category-header">
-                <span class="category-name">Opinion Content</span>
-                <span class="category-percentage">--</span>
+                <span class="category-name" id="opinion-category-label">Opinion Content</span>
+                <span class="category-percentage" aria-labelledby="opinion-category-label">--</span>
               </div>
               <div class="category-confidence">
-                <div class="confidence-indicator">
+                <div class="confidence-indicator" role="meter" aria-label="Opinion content confidence level" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                   <div class="confidence-dots">
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
                   </div>
                 </div>
               </div>
             </div>
             <div class="category-item false-category">
               <div class="category-header">
-                <span class="category-name">False Content</span>
-                <span class="category-percentage">--</span>
+                <span class="category-name" id="false-category-label">False Content</span>
+                <span class="category-percentage" aria-labelledby="false-category-label">--</span>
               </div>
               <div class="category-confidence">
-                <div class="confidence-indicator">
+                <div class="confidence-indicator" role="meter" aria-label="False content confidence level" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                   <div class="confidence-dots">
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="dot" aria-hidden="true"></span>
                   </div>
                 </div>
               </div>
@@ -108,15 +116,15 @@ export class DetailedAnalysis {
           </div>
         </div>
         <div class="analysis-metadata">
-          <h5>Analysis Information</h5>
-          <div class="metadata-grid">
+          <h5 id="analysis-info-heading">Analysis Information</h5>
+          <div class="metadata-grid" role="group" aria-labelledby="analysis-info-heading">
             <div class="metadata-item">
-              <span class="metadata-label">Analysis Time</span>
-              <span class="metadata-value analysis-time">--</span>
+              <span class="metadata-label" id="analysis-time-label">Analysis Time</span>
+              <span class="metadata-value analysis-time" aria-labelledby="analysis-time-label">--</span>
             </div>
             <div class="metadata-item">
-              <span class="metadata-label">Content Hash</span>
-              <span class="metadata-value content-hash">--</span>
+              <span class="metadata-label" id="content-hash-label">Content Hash</span>
+              <span class="metadata-value content-hash" aria-labelledby="content-hash-label">--</span>
             </div>
           </div>
         </div>
@@ -148,11 +156,59 @@ export class DetailedAnalysis {
       detailsSection.classList.add('expanded');
       expandToggle.textContent = 'Hide Details';
       expandToggle.setAttribute('aria-expanded', 'true');
+      detailsSection.setAttribute('aria-hidden', 'false');
+      
+      // Make the details section focusable and focus it for keyboard users
+      detailsSection.setAttribute('tabindex', '0');
+      detailsSection.focus();
+      
+      // Announce to screen readers that details are now expanded
+      const liveRegion = this.getOrCreateLiveRegion();
+      liveRegion.textContent = 'Analysis details expanded';
+      setTimeout(() => { liveRegion.textContent = ''; }, 1000);
     } else {
       detailsSection.classList.remove('expanded');
       expandToggle.textContent = 'Show Details';
       expandToggle.setAttribute('aria-expanded', 'false');
+      detailsSection.setAttribute('aria-hidden', 'true');
+      detailsSection.setAttribute('tabindex', '-1');
+      
+      // Return focus to the toggle button
+      expandToggle.focus();
+      
+      // Announce to screen readers that details are now collapsed
+      const liveRegion = this.getOrCreateLiveRegion();
+      liveRegion.textContent = 'Analysis details collapsed';
+      setTimeout(() => { liveRegion.textContent = ''; }, 1000);
     }
+  }
+  
+  /**
+   * Creates or returns a live region for screen reader announcements
+   */
+  private getOrCreateLiveRegion(): HTMLElement {
+    let liveRegion = document.getElementById('detailed-analysis-live-region');
+    
+    if (!liveRegion) {
+      liveRegion = document.createElement('div');
+      liveRegion.id = 'detailed-analysis-live-region';
+      liveRegion.setAttribute('aria-live', 'polite');
+      liveRegion.setAttribute('aria-atomic', 'true');
+      liveRegion.className = 'sr-only';
+      liveRegion.style.position = 'absolute';
+      liveRegion.style.width = '1px';
+      liveRegion.style.height = '1px';
+      liveRegion.style.padding = '0';
+      liveRegion.style.margin = '-1px';
+      liveRegion.style.overflow = 'hidden';
+      // Use clipPath instead of deprecated clip property
+      liveRegion.style.clipPath = 'inset(100%)';
+      liveRegion.style.whiteSpace = 'nowrap';
+      liveRegion.style.border = '0';
+      document.body.appendChild(liveRegion);
+    }
+    
+    return liveRegion;
   }
 
   public render(analysisResult: AnalysisResult): void {
@@ -184,21 +240,39 @@ export class DetailedAnalysis {
     }
   }
 
-  private updateReasoning(reasoning: string): void {
+  private updateReasoning(reasoning: { factual: string[]; unfactual: string[]; subjective: string[]; objective: string[] }): void {
     const reasoningText = this.container.querySelector('.reasoning-text') as HTMLElement;
     
     if (reasoningText) {
-      let displayText = reasoning;
+      // Combine all reasoning categories into a formatted string
+      let displayText = this.combineReasoningCategories(reasoning);
       
       // Truncate if too long and expandable is enabled
-      if (this.options.expandable && reasoning.length > this.options.maxReasoningLength) {
-        displayText = reasoning.substring(0, this.options.maxReasoningLength) + '...';
+      if (this.options.expandable && displayText.length > this.options.maxReasoningLength) {
+        displayText = displayText.substring(0, this.options.maxReasoningLength) + '...';
       }
       
       // Format the text with basic markdown-like formatting
       displayText = this.formatReasoningText(displayText);
       reasoningText.innerHTML = displayText;
     }
+  }
+
+  private combineReasoningCategories(reasoning: { factual: string[]; unfactual: string[]; subjective: string[]; objective: string[] }): string {
+    const sections: Array<{title: string, items: string[]}> = [
+      { title: 'Factual Points', items: reasoning.factual || [] },
+      { title: 'Unfactual Points', items: reasoning.unfactual || [] },
+      { title: 'Subjective Content', items: reasoning.subjective || [] },
+      { title: 'Objective Content', items: reasoning.objective || [] }
+    ];
+    
+    return sections
+      .filter(section => section.items.length > 0)
+      .map(section => {
+        const items = section.items.join('\n• ');
+        return `**${section.title}**\n• ${items}`;
+      })
+      .join('\n\n');
   }
 
   private formatReasoningText(text: string): string {
