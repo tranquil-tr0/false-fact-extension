@@ -178,41 +178,39 @@ export class PollinationsService {
   }
 
   /**
-   * Try simple GET request to base endpoint (Pollinations.ai Text-To-Text API)
+   * Try POST request to OpenAI-compatible Pollinations.ai endpoint
    */
   private async trySimpleGetRequest(systemPrompt: string, userPrompt: string): Promise<AnalysisApiResponse> {
-    // Combine system and user prompt
-    const prompt = `${systemPrompt}\n\n${userPrompt}`;
-    const encodedPrompt = encodeURIComponent(prompt);
-    // Build query parameters
-    const queryParams = new URLSearchParams({
-      model: 'openai-fast',
-      json: 'true'
-    });
-    const url = `${this.baseUrl}/${encodedPrompt}?${queryParams.toString()}`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
+    const payload = {
+      model: "openai-fast",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.7,
+      stream: false,
+      private: false,
+      response_format: { type: "json_object" }
+    };
+
+    const response = await fetch(`${this.baseUrl}/openai`, {
+      method: "POST",
       headers: {
-        'Accept': 'application/json, text/plain, */*'
-      }
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
-      throw this.createHttpError(response.status, `GET request failed with status ${response.status}`);
+      throw this.createHttpError(response.status, `POST request failed with status ${response.status}`);
     }
 
-    const responseText = await response.text();
-    console.log("Pollinations.ai response received, length:", responseText.length);
-    
-    try {
-      // First try to parse as JSON if the response is in JSON format
-      const jsonResponse = JSON.parse(responseText);
-      return parseAnalysisResponse(jsonResponse);
-    } catch (e) {
-      // If not valid JSON, treat as plain text
-      return parseAnalysisResponse(responseText);
-    }
+    const responseJson = await response.json();
+    console.log("Pollinations.ai response received:", responseJson);
+
+    // Extract content from OpenAI-compatible response
+    const content = responseJson?.choices?.[0]?.message?.content ?? "";
+    return parseAnalysisResponse(content);
   }
 
   /**
