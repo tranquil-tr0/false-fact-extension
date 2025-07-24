@@ -42,6 +42,14 @@ export default defineContentScript({
         sendResponse({ hasSelection });
         return true;
       }
+
+      // Respond with selected text for analyze-highlighted button
+      if (message.action === 'get-selected-text') {
+        const selection = window.getSelection();
+        const selectedText = selection ? selection.toString().trim() : '';
+        sendResponse({ text: selectedText });
+        return true;
+      }
       
       return false;
     });

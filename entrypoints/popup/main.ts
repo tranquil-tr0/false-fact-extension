@@ -57,10 +57,104 @@ let state: PopupState = {
 // Initialize popup
 async function initializePopup() {
   try {
-    // Simply show ready state - the content script will handle URL detection
+    // Check for selected text in the active tab
+    let hasSelection = false;
+    let selectedText = '';
+    try {
+      const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+      if (tab.id) {
+        const selectionResult = await browser.tabs.sendMessage(tab.id, {
+          action: 'get-selected-text'
+        });
+        selectedText = selectionResult && selectionResult.text ? selectionResult.text.trim() : '';
+        hasSelection = !!selectedText;
+      }
+    } catch (e) {
+      // Ignore errors, fallback to default
+    }
     pageUrl.textContent = 'Ready to analyze';
     updateStatus('Ready to analyze content');
     analyzeBtn.disabled = false;
+    buttonText.textContent = 'Analyze Content';
+
+    // Dynamically add "Analyze Highlighted Text" button if selection exists
+    const analyzeSection = document.querySelector('.analyze-section');
+    let highlightedBtn = document.getElementById('analyze-highlighted-btn') as HTMLButtonElement;
+    if (highlightedBtn) {
+      highlightedBtn.remove();
+    }
+    if (hasSelection && analyzeSection) {
+      highlightedBtn = document.createElement('button');
+      highlightedBtn.id = 'analyze-highlighted-btn';
+      highlightedBtn.className = 'analyze-button highlighted';
+      highlightedBtn.type = 'button';
+      highlightedBtn.setAttribute('aria-label', 'Analyze highlighted text');
+      highlightedBtn.innerHTML = `<span class="button-text">Analyze Highlighted Text</span>`;
+      analyzeSection.insertBefore(highlightedBtn, analyzeBtn.nextSibling);
+
+      highlightedBtn.addEventListener('click', async () => {
+        // Only analyze selected text
+        updateUIState('extracting');
+        try {
+          const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+          if (!tab.id) {
+            showError('No Active Tab', 'Please navigate to a webpage to analyze content.', 'no_tab');
+            return;
+          }
+          state.currentUrl = tab.url || '';
+          if (pageUrl) {
+            pageUrl.textContent = truncateUrl(state.currentUrl);
+          }
+          // Show initial progress animation
+          if (progressBar) {
+            progressBar.classList.add('indeterminate');
+          }
+          // Use selectedText for extraction
+          if (!selectedText) {
+            showError(
+              'No Highlighted Text',
+              'No highlighted text was found. Please select text and try again.',
+              'no_highlighted_text'
+            );
+            return;
+          }
+          // Update UI to analyzing state
+          updateUIState('analyzing');
+          if (progressBar) {
+            progressBar.classList.remove('indeterminate');
+          }
+          updateProgress(60, 'Analyzing highlighted text for credibility...');
+          // Send to background script for analysis
+          const analysisResult = await browser.runtime.sendMessage({
+            action: 'analyze-content',
+            tabId: tab.id,
+            data: {
+              content: selectedText,
+              url: state.currentUrl,
+              title: document.title,
+              contentType: 'selection'
+            }
+          });
+          if (analysisResult.success) {
+            updateProgress(100, 'Analysis complete');
+            showSuccessFeedback('Analysis complete');
+            showResults(analysisResult.data);
+          } else {
+            const error = analysisResult.error;
+            const errorType = error?.type || 'analysis_failed';
+            const errorMessage = error?.message || 'Analysis failed. Please try again.';
+            const suggestedAction = error?.suggestedAction;
+            handleAnalysisError(errorType, errorMessage, suggestedAction, error?.retryable);
+          }
+        } catch (error) {
+          showError(
+            'Analysis Error',
+            'An unexpected error occurred during analysis. Please try again.',
+            'unexpected_error'
+          );
+        }
+      });
+    }
   } catch (error) {
     console.error('Failed to initialize popup:', error);
     showError('Initialization Error', 'Failed to initialize the extension. Please try again.', 'init_error');
