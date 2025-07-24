@@ -133,7 +133,7 @@ function initializeTextSelection(): void {
       const selectedText = selection?.toString().trim() || '';
       
       // Only process if selection has changed and is substantial
-      if (selectedText !== lastSelection && selectedText.length > 10) {
+      if (selectedText !== lastSelection && selectedText.length > 0) {
         lastSelection = selectedText;
         showSelectionFeedback(selection);
       } else if (selectedText.length === 0) {
@@ -149,7 +149,7 @@ function initializeTextSelection(): void {
       const selection = window.getSelection();
       const selectedText = selection?.toString().trim() || '';
       
-      if (selectedText.length > 10) {
+      if (selectedText.length > 0) {
         showSelectionFeedback(selection);
       }
     }, 100);
@@ -239,7 +239,7 @@ function hideSelectionFeedback(): void {
 }
 
 /**
- * Extracts selected text with fallback mechanisms
+ * Extracts selected text without fallback mechanisms
  */
 async function extractSelectedText(): Promise<ContentExtractionResult> {
   const currentUrl = window.location.href;
@@ -249,12 +249,7 @@ async function extractSelectedText(): Promise<ContentExtractionResult> {
   }
 
   const selection = window.getSelection();
-  let selectedText = selection?.toString().trim() || '';
-  
-  // If no text is selected, try fallback mechanisms
-  if (!selectedText) {
-    selectedText = await tryFallbackExtraction();
-  }
+  const selectedText = selection?.toString().trim() || '';
   
   if (!selectedText) {
     throw new Error('No text selected. Please select text on the page to analyze.');
@@ -267,9 +262,9 @@ async function extractSelectedText(): Promise<ContentExtractionResult> {
     throw new Error('Selected text is empty after sanitization');
   }
 
-  // Generate a title from the selected content or page title
-  const title = generateTitleFromSelection(content) || sanitizeTitle(document.title || 'Selected Text');
-  
+  // Title is always blank
+  const title = '';
+
   // Calculate word count
   const wordCount = countWords(content);
   
@@ -300,87 +295,7 @@ async function extractSelectedText(): Promise<ContentExtractionResult> {
 }
 
 /**
- * Attempts fallback extraction methods when no text is selected
- */
-async function tryFallbackExtraction(): Promise<string> {
-  // Try to extract from common social media post selectors
-  const socialMediaSelectors = [
-    '[data-testid="tweetText"]', // Twitter/X
-    '[data-testid="tweet-text"]',
-    '.tweet-text',
-    '[role="article"] [lang]', // Twitter posts with language attribute
-    '.post-message', // Facebook
-    '.userContent',
-    '.post-content',
-    '.entry-content',
-    '.content',
-    'article p',
-    '[role="article"] p'
-  ];
-  
-  for (const selector of socialMediaSelectors) {
-    const elements = document.querySelectorAll(selector);
-    if (elements.length > 0) {
-      // Get the most substantial text content
-      let bestContent = '';
-      let maxLength = 0;
-      
-      elements.forEach(element => {
-        const text = element.textContent?.trim() || '';
-        if (text.length > maxLength && text.length > 50) {
-          bestContent = text;
-          maxLength = text.length;
-        }
-      });
-      
-      if (bestContent) {
-        return bestContent;
-      }
-    }
-  }
-  
-  // If still no content, try Readability as last resort
-  try {
-    const documentClone = document.cloneNode(true) as Document;
-    const article = new Readability(documentClone).parse();
-    
-    if (article?.textContent) {
-      const content = sanitizeText(article.textContent);
-      // Only return if it's reasonably short (likely social media post)
-      if (content.length < 2000) {
-        return content;
-      }
-    }
-  } catch (error) {
-    console.warn('Readability fallback failed:', error);
-  }
-  
-  return '';
-}
-
-/**
- * Generates a title from selected text content
- */
-function generateTitleFromSelection(content: string): string {
-  if (!content) return '';
-  
-  // Take first sentence or first 50 characters as title
-  const firstSentence = content.split(/[.!?]/)[0]?.trim();
-  
-  if (firstSentence && firstSentence.length > 10 && firstSentence.length <= 100) {
-    return firstSentence;
-  }
-  
-  // Fallback to first 50 characters
-  if (content.length > 50) {
-    return content.substring(0, 47).trim() + '...';
-  }
-  
-  return content;
-}
-
-/**
- * Extracts content for analysis - intelligently chooses between article extraction and text selection
+ * Extracts content for analysis - chooses between article extraction and text selection only
  */
 async function extractContentForAnalysis(): Promise<ContentExtractionResult & { contentType: string }> {
   const currentUrl = window.location.href;
@@ -394,7 +309,7 @@ async function extractContentForAnalysis(): Promise<ContentExtractionResult & { 
   const selectedText = selection?.toString().trim() || '';
   
   // If user has selected substantial text, prioritize that
-  if (selectedText && selectedText.length > 50) {
+  if (selectedText && selectedText.length > 0) {
     try {
       const result = await extractSelectedText();
       return { ...result, contentType: "article" as const };
@@ -403,46 +318,14 @@ async function extractContentForAnalysis(): Promise<ContentExtractionResult & { 
     }
   }
   
-  // For articles, try Readability first
+  // For articles, try Readability
   try {
     const result = await extractArticleText();
     return { ...result, contentType: "article" as const };
   } catch (error) {
-    console.warn('Article extraction failed, trying fallback methods:', error);
-  }
-  
-  // For social media or when article extraction fails, try fallback extraction
-  try {
-    const fallbackContent = await tryFallbackExtraction();
-    
-    if (fallbackContent) {
-      const title = generateTitleFromSelection(fallbackContent) || sanitizeTitle(document.title || 'Extracted Content');
-      const content = sanitizeText(fallbackContent);
-      
-      const extractionResult: ContentExtractionResult = {
-        title,
-        content,
-        url: currentUrl,
-        extractionMethod: 'selection',
-        timestamp: Date.now()
-      };
-
-      // Create extended content for validation
-      const extendedContent = {
-        ...extractionResult,
-        contentType: "article" as const,
-        wordCount: countWords(content)
-      };
-
-      // Validate content meets requirements
-      validateContent(extendedContent);
-
-      return { ...extractionResult, contentType: "article" as const };
-    }
-  } catch (error) {
-    console.warn('Fallback extraction failed:', error);
+    console.warn('Article extraction failed:', error);
   }
   
   // If all methods fail, provide helpful error message
-  throw new Error('No analyzable content found on this page. Try selecting text manually or visit a news article or social media post.');
+  throw new Error('No analyzable content found on this page. Try selecting text manually or visit a news article.');
 }
