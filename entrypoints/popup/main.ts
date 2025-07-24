@@ -8,7 +8,6 @@ import {
   enhanceForHighContrast,
   type KeyboardShortcut
 } from '../../utils/accessibility.js';
-import { createTooltip } from '../../utils/tooltip';
 
 // Ensure browser API is available
 declare const browser: any;
@@ -1287,53 +1286,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   helpBtn.addEventListener('click', handleHelpClick);
 
-  // Tooltips for main actions
-  createTooltip(analyzeBtn, 'Analyze the content of the current page. Shortcut: A', { position: 'bottom' });
-  createTooltip(cancelBtn, 'Cancel the current analysis. Shortcut: C', { position: 'bottom' });
-  createTooltip(retryBtn, 'Try analyzing again. Shortcut: R', { position: 'bottom' });
-  createTooltip(helpBtn, 'Get help and troubleshooting tips. Shortcut: Alt+H', { position: 'bottom' });
-
-  // Tooltips for result actions (dynamically added)
-  const setupResultTooltips = () => {
-    const analyzeAgainBtn = document.getElementById('analyze-again-btn');
-    const shareResultsBtn = document.getElementById('share-results-btn');
-    if (analyzeAgainBtn) {
-      createTooltip(analyzeAgainBtn, 'Analyze the page again. Shortcut: A', { position: 'top' });
-    }
-    if (shareResultsBtn) {
-      createTooltip(shareResultsBtn, 'Copy results to clipboard. Shortcut: S', { position: 'top' });
-    }
-  };
-  // Call after results are shown
-  const origShowResults = showResults;
-  (window as any)._origShowResults = origShowResults;
-  (window as any).showResults = function(...args: any[]) {
-    origShowResults(args[0]);
-    setTimeout(setupResultTooltips, 100); // Wait for DOM
-  };
 });
 
-(function ensureTooltipStyles() {
-  if (document.getElementById('ffx-tooltip-styles')) return;
-  const style = document.createElement('style');
-  style.id = 'ffx-tooltip-styles';
-  style.textContent = `
-    .tooltip { position: fixed; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.18s cubic-bezier(.4,0,.2,1), transform 0.18s cubic-bezier(.4,0,.2,1); transform: translateY(4px) scale(0.98); background: #23272f; color: #fff; border-radius: 6px; padding: 8px 12px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); max-width: 250px; }
-    .tooltip-light { background: #fff; color: #23272f; box-shadow: 0 2px 8px rgba(0,0,0,0.10); }
-    .tooltip-visible { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
-    .tooltip-arrow { width: 0; height: 0; position: absolute; }
-    .tooltip-arrow-bottom { top: 100%; left: 50%; transform: translateX(-50%); border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 7px solid #23272f; }
-    .tooltip-light .tooltip-arrow-bottom { border-top-color: #fff; }
-    .tooltip-arrow-top { bottom: 100%; left: 50%; transform: translateX(-50%); border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 7px solid #23272f; }
-    .tooltip-light .tooltip-arrow-top { border-bottom-color: #fff; }
-    .tooltip-arrow-left { right: 100%; top: 50%; transform: translateY(-50%); border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 7px solid #23272f; }
-    .tooltip-light .tooltip-arrow-left { border-right-color: #fff; }
-    .tooltip-arrow-right { left: 100%; top: 50%; transform: translateY(-50%); border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 7px solid #23272f; }
-    .tooltip-light .tooltip-arrow-right { border-left-color: #fff; }
-    .tooltip-content { pointer-events: none; }
-  `;
-  document.head.appendChild(style);
-})();
 
 window.requestAnimationFrame(() => {
   // Defer any heavy logic here if needed for faster first paint

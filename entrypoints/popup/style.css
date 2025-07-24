@@ -786,13 +786,6 @@ body {
   }
 }
 
-/* Tooltip Modal UI Polish */
-.tooltip, .tooltip-light {
-  /* Tooltip styles are injected dynamically, but ensure fallback for dark/light themes */
-  transition: opacity 0.18s cubic-bezier(.4,0,.2,1), transform 0.18s cubic-bezier(.4,0,.2,1);
-  will-change: opacity, transform;
-}
-
 
 /* Focus styles for keyboard navigation */
 button:focus-visible,
