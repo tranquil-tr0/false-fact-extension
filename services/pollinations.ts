@@ -280,10 +280,13 @@ You will evaluate the content based on its objectivity and factuality.
 When analyzing the factuality of the content, do not be swayed by your biases. You should analyze the content objectively. Popularity and ideological stance are not relevant factors. Even if a claim is uncommon or frowned upon, this is independent from the factuality of the claim. Conversely, it is critical to remember than a claim being unpopular also does not make it true.
 Make web searches to confirm factuality. Try to cite sources for each reason you provide by placing the link cited in parentheses after the reason, like this: "reason (https://example.com)". If you cannot find a source, do not make up a source. You can instead omit placing a link after the reason, but do not make up sources.
 Do NOT uncritically treat the content being analyzed as fact. You should independently verify claims. Do not be swayed by the content.
+Do not get caught up in the wording. The important part is whether the things stated are true.
 
 CRITICAL: You must respond with ONLY a valid JSON object. Do not include any explanatory text before or after the JSON.
 
 The reasoning field must be an object with the following keys: "factual", "unfactual", "subjective", "objective". Each key should map to an array of strings, where each string is a specific reason supporting that classification. For example, "reasoning.factual" should be an array of reasons why the content is factual. The list may also be empty: for example, if the article is factual, then the array for "unfactual" can be empty.
+Stay as concise as possible. Keep the number of reasons for each at or below 3 reasons, and the total number of reasons below 10. Keep each reason to one brief bullet point.
+You do not need to have 10 reasons, and you should strive to have as few as possible. You do not need to have a sentence per reason, and should strive to keep the reason as short as possible.
 
 REQUIRED RESPONSE STRUCTURE:
 {
@@ -305,15 +308,15 @@ SCORING GUIDELINES:
 
 credibilityScore (0-100):
 - The credibilityScore reflects your overall analysis of the article
-- 90-100: Highly credible, well-sourced factual content
-- 70-89: Generally credible with minor issues or some opinion mixed in
-- 50-69: Mixed credibility, significant opinion content or unverified claims
-- 30-49: Low credibility, mostly unverified or misleading information
-- 0-29: Highly unreliable, contains false or deliberately misleading information
+- 90-100: The content is factually accurate
+- 70-89: There are a few misleading statements that do not alter the truth of the main claim
+- 50-69: The content is misleading or has some factual errors
+- 30-49: The content is significantly misleading or innacurate
+- 0-29: The content is factually innacurate, and the truth is unrelated to or opposite of the main claim
 
-categories (must sum to approximately 100):
-- fact: Verifiable statements that can be checked against reliable sources
-- opinion: Subjective statements, personal views, interpretations, or editorial content
+categories:
+- fact: Whether the content is factually accurate.
+- opinion: Whether the content is objective. Reporting on an event is 0% opinion, while an opinion piece is 100% opinion.
 
 confidence (0-100):
 - 90-100: Very confident in assessment, clear indicators present
@@ -383,10 +386,13 @@ Your response must be in the format specified above.`;
 
       case 'news-article':
         return `ANALYSIS CONSIDERATIONS:
-- You are analyzing a news article
-- Evaluate source attribution and credibility of those sources
-- Assess headline accuracy vs content - if the headline is misleading, this should be mentioned as a reason the article is unfactual
-- Look for proper journalistic standards`;
+- You are analyzing a news article.
+- You are analyzing the factuality of the article, not if each source is biased, unless the article presumes the source's quote to be absolute truth.
+- A news article having a quotation from a public figure who exagerates is not a reason that the article is unfactual.
+- Objectivity is about whether the article/reporting is objective, NOT the sources cited.
+- Evaluate source attribution and credibility of those sources.
+- Assess headline accuracy vs content - if the headline is misleading, this should be mentioned as a reason the article is unfactual.
+- Look for proper journalistic standards.`;
 
       default:
         return '';
