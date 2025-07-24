@@ -1,12 +1,13 @@
 import { Readability } from '@mozilla/readability';
+import TurndownService from 'turndown';
 import type { ContentExtractionResult } from '../types/models.js';
-import { 
-  sanitizeText, 
-  sanitizeTitle, 
-  countWords, 
+import {
+  sanitizeText,
+  sanitizeTitle,
+  countWords,
   validateContent,
   isSocialMediaContent,
-  validateUrl 
+  validateUrl
 } from '../utils/index.js';
 
 export default defineContentScript({
@@ -68,9 +69,13 @@ async function extractArticleText(): Promise<ContentExtractionResult> {
     throw new Error('Failed to extract article content using Readability');
   }
 
-  // Sanitize extracted content
+  const turndownService = new TurndownService();
+  // Extract HTML content and convert to markdown
   const title = sanitizeTitle(article.title || document.title || '');
-  const content = sanitizeText(article.textContent || article.content || '');
+  const htmlContent = article.content || '';
+  const content = htmlContent
+    ? turndownService.turndown(htmlContent)
+    : '';
   
   if (!title.trim()) {
     throw new Error('No title found for content extraction');
@@ -82,9 +87,6 @@ async function extractArticleText(): Promise<ContentExtractionResult> {
 
   // Calculate word count
   const wordCount = countWords(content);
-  
-  // Detect content type
-  const contentType = detectContentType();
   
   // Create extraction result
   const extractionResult: ContentExtractionResult = {
@@ -98,7 +100,7 @@ async function extractArticleText(): Promise<ContentExtractionResult> {
   // Create extended content for validation
   const extendedContent = {
     ...extractionResult,
-    contentType,
+    contentType: "article" as const,
     wordCount
   };
 
@@ -110,52 +112,6 @@ async function extractArticleText(): Promise<ContentExtractionResult> {
   }
 
   return extractionResult;
-}
-
-/**
- * Detects the type of content on the current page
- */
-function detectContentType(): 'article' | 'social-media' | 'other' {
-  const currentUrl = window.location.href;
-  const pageContent = document.body?.textContent || '';
-  
-  // Check if it's social media content
-  if (isSocialMediaContent(currentUrl, pageContent)) {
-    return 'social-media';
-  }
-  
-  // Check for article indicators
-  const articleSelectors = [
-    'article',
-    '[role="article"]',
-    '.article',
-    '.post-content',
-    '.entry-content',
-    '.content',
-    'main'
-  ];
-  
-  const hasArticleStructure = articleSelectors.some(selector => 
-    document.querySelector(selector) !== null
-  );
-  
-  // Check for news/article specific meta tags
-  const hasArticleMeta = !!(
-    document.querySelector('meta[property="og:type"][content="article"]') ||
-    document.querySelector('meta[name="article:author"]') ||
-    document.querySelector('meta[name="article:published_time"]') ||
-    document.querySelector('[itemtype*="Article"]')
-  );
-  
-  // Check content length and structure
-  const wordCount = countWords(pageContent);
-  const hasSubstantialContent = wordCount > 100;
-  
-  if ((hasArticleStructure || hasArticleMeta) && hasSubstantialContent) {
-    return 'article';
-  }
-  
-  return 'other';
 }
 
 /**
@@ -205,10 +161,6 @@ function initializeTextSelection(): void {
  */
 function showSelectionFeedback(selection: Selection | null): void {
   if (!selection || selection.rangeCount === 0) return;
-  
-  // Only show feedback on social media platforms
-  const contentType = detectContentType();
-  if (contentType !== 'social-media') return;
   
   // Remove existing feedback
   hideSelectionFeedback();
@@ -321,9 +273,6 @@ async function extractSelectedText(): Promise<ContentExtractionResult> {
   // Calculate word count
   const wordCount = countWords(content);
   
-  // Detect content type
-  const contentType = detectContentType();
-  
   // Create extraction result
   const extractionResult: ContentExtractionResult = {
     title,
@@ -336,7 +285,7 @@ async function extractSelectedText(): Promise<ContentExtractionResult> {
   // Create extended content for validation
   const extendedContent = {
     ...extractionResult,
-    contentType,
+    contentType: "article" as const,
     wordCount
   };
 
@@ -440,8 +389,6 @@ async function extractContentForAnalysis(): Promise<ContentExtractionResult & { 
     throw new Error('Invalid URL for content extraction');
   }
 
-  const contentType = detectContentType();
-  
   // Check if user has selected text
   const selection = window.getSelection();
   const selectedText = selection?.toString().trim() || '';
@@ -450,26 +397,18 @@ async function extractContentForAnalysis(): Promise<ContentExtractionResult & { 
   if (selectedText && selectedText.length > 50) {
     try {
       const result = await extractSelectedText();
-      return {
-        ...result,
-        contentType
-      };
+      return { ...result, contentType: "article" as const };
     } catch (error) {
       console.warn('Selected text extraction failed, falling back to article extraction:', error);
     }
   }
   
   // For articles, try Readability first
-  if (contentType === 'article') {
-    try {
-      const result = await extractArticleText();
-      return {
-        ...result,
-        contentType
-      };
-    } catch (error) {
-      console.warn('Article extraction failed, trying fallback methods:', error);
-    }
+  try {
+    const result = await extractArticleText();
+    return { ...result, contentType: "article" as const };
+  } catch (error) {
+    console.warn('Article extraction failed, trying fallback methods:', error);
   }
   
   // For social media or when article extraction fails, try fallback extraction
@@ -491,28 +430,19 @@ async function extractContentForAnalysis(): Promise<ContentExtractionResult & { 
       // Create extended content for validation
       const extendedContent = {
         ...extractionResult,
-        contentType,
+        contentType: "article" as const,
         wordCount: countWords(content)
       };
 
       // Validate content meets requirements
       validateContent(extendedContent);
 
-      return {
-        ...extractionResult,
-        contentType
-      };
+      return { ...extractionResult, contentType: "article" as const };
     }
   } catch (error) {
     console.warn('Fallback extraction failed:', error);
   }
   
-  // If all methods fail, provide helpful error message based on content type
-  if (contentType === 'social-media') {
-    throw new Error('No content found. Please select text from a post to analyze.');
-  } else if (contentType === 'article') {
-    throw new Error('Unable to extract article content. The page may still be loading or may not contain readable content.');
-  } else {
-    throw new Error('No analyzable content found on this page. Try selecting text manually or visit a news article or social media post.');
-  }
+  // If all methods fail, provide helpful error message
+  throw new Error('No analyzable content found on this page. Try selecting text manually or visit a news article or social media post.');
 }
