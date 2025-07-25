@@ -159,7 +159,7 @@ export class PollinationsService {
     const analysisPrompt = this.createAnalysisPrompt(text);
     
     try {
-      return await this.trySimpleGetRequest(systemPrompt, analysisPrompt);
+      return await this.doApiCall(systemPrompt, analysisPrompt);
     } catch (error) {
       console.warn('API request failed:', error);
 
@@ -180,7 +180,7 @@ export class PollinationsService {
   /**
    * Try POST request to OpenAI-compatible Pollinations.ai endpoint
    */
-  private async trySimpleGetRequest(systemPrompt: string, userPrompt: string): Promise<AnalysisApiResponse> {
+  private async doApiCall(systemPrompt: string, userPrompt: string): Promise<AnalysisApiResponse> {
     const payload = {
       model: "openai-fast",
       messages: [
