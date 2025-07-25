@@ -91,7 +91,7 @@ class BackgroundService {
           return true;
 
         case 'retry-analysis':
-          this.handleRetryAnalysis(tabId)
+          this.handleRetryAnalysis(sender.tab?.id ?? message.tabId)
             .then(result => sendResponse({ success: true, data: result }))
             .catch(error => sendResponse({ 
               success: false, 
@@ -181,7 +181,7 @@ class BackgroundService {
    * Handles content analysis request from new popup interface
    */
   private async handleAnalyzeContent(
-    data: { content: string; url: string; title: string; contentType: string },
+    data: { content: string; url: string; title: string; contentType: string; extractionMethod: 'readability' | 'selection' },
     tabId?: number
   ): Promise<AnalysisResult> {
     if (!tabId) {
@@ -219,14 +219,14 @@ class BackgroundService {
     iconManager.setAnalyzingState(tabId);
 
     try {
-      // Create content extraction result from provided data
-      const extractedContent: ContentExtractionResult = {
-        title: data.title,
-        content: data.content,
-        url: data.url,
-        extractionMethod: data.contentType === 'social-media' ? 'selection' : 'readability',
-        timestamp: Date.now()
-      };
+    // Create content extraction result from provided data
+    const extractedContent: ContentExtractionResult = {
+      title: data.title,
+      content: data.content,
+      url: data.url,
+      extractionMethod: data.extractionMethod,
+      timestamp: Date.now()
+    };
 
       // Perform analysis
       const analysisResult = await this.performAnalysis(extractedContent, workflow);
@@ -256,7 +256,7 @@ class BackgroundService {
    * Handles analysis start request from popup
    */
   private async handleStartAnalysis(
-    data: { extractionMethod: 'article' | 'selection' },
+    data: { extractionMethod: 'readability' | 'selection' },
     tabId?: number
   ): Promise<AnalysisResult> {
     if (!tabId) {
@@ -341,9 +341,9 @@ class BackgroundService {
    */
   private async extractContent(
     tabId: number,
-    method: 'article' | 'selection'
+    method: 'readability' | 'selection'
   ): Promise<ContentExtractionResult> {
-    const action = method === 'article' ? 'extract-article-text' : 'extract-selected-text';
+    const action = method === 'readability' ? 'extract-article-text' : 'extract-selected-text';
     
     try {
       const response = await browser.tabs.sendMessage(tabId, { action });
@@ -503,7 +503,7 @@ class BackgroundService {
   }
 
   /**
-   * Handles analysis retry
+   * Handles analysis retry for a tab
    */
   private async handleRetryAnalysis(tabId?: number): Promise<AnalysisResult> {
     if (!tabId) {
@@ -514,7 +514,6 @@ class BackgroundService {
         'Please ensure you have an active tab open'
       );
     }
-
     const workflow = this.getWorkflowForTab(tabId);
     if (!workflow) {
       throw new ExtensionError(
@@ -524,7 +523,6 @@ class BackgroundService {
         'Please start a new analysis'
       );
     }
-
     if (workflow.retryCount >= this.maxRetries) {
       throw new ExtensionError(
         AnalysisErrorType.API_UNAVAILABLE,
@@ -533,19 +531,17 @@ class BackgroundService {
         'Please try again later or with different content'
       );
     }
-
-    // Reset workflow for retry
     workflow.status = 'extracting';
     workflow.error = undefined;
     workflow.startTime = Date.now();
-
-    // Determine extraction method based on previous workflow
-    const extractionMethod = workflow.url.includes('twitter.com') || 
-                           workflow.url.includes('facebook.com') || 
-                           workflow.url.includes('linkedin.com') 
-                           ? 'selection' : 'article';
-
-    return this.handleStartAnalysis({ extractionMethod }, tabId);
+    // Extraction method must be explicit; fallback to 'readability' if not present
+    let extractionMethod: 'readability' | 'selection' = 'readability';
+    if (workflow.result && 'extractionMethod' in workflow.result) {
+      extractionMethod = (workflow.result as any).extractionMethod ?? 'readability';
+    } else if ((workflow as any).extractionMethod) {
+      extractionMethod = (workflow as any).extractionMethod;
+    }
+    return await this.handleStartAnalysis({ extractionMethod }, tabId);
   }
 
   /**

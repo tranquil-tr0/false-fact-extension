@@ -27,8 +27,8 @@ export interface ExtractedContent {
   title: string;
   content: string;
   url: string;
-  extractionMethod: 'readability' | 'selection' | 'manual';
-  contentType: 'article' | 'social-media' | 'other';
+  extractionMethod: 'readability' | 'selection';
+  contentType: 'article' | 'social-media' | 'selection';
   wordCount: number;
   timestamp: number;
 }
@@ -37,7 +37,7 @@ export interface ContentExtractionResult {
   title: string;
   content: string;
   url: string;
-  extractionMethod: 'readability' | 'selection' | 'manual';
+  extractionMethod: 'readability' | 'selection';
   timestamp: number;
 }
 
@@ -50,7 +50,7 @@ export interface IconState {
 export interface AnalysisRequest {
   content: string;
   url: string;
-  contentType: 'article' | 'social-media';
+  contentType: 'article' | 'social-media' | 'selection';
 }
 
 export interface PopupState {
