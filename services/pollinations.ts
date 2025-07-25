@@ -25,12 +25,14 @@ import {
   gracefulDegradationService,
   RecoveryStrategy 
 } from '../utils/error-recovery.js';
+import { postToPollinationsApi, callGeminiApi } from './api-call.js';
 
 export class PollinationsService {
   // Pollinations.ai Text API endpoints
   private readonly baseUrl = 'https://text.pollinations.ai';
   private readonly maxRetries = 3;
   private readonly maxRetryDelay = 10000; // 10 seconds
+  private readonly geminiApiKey = 'YOUR_GEMINI_API_KEY_HERE'; // <-- Set your Gemini API key here
 
   /**
    * Analyzes text content for credibility using Pollinations.AI with comprehensive error recovery
@@ -181,36 +183,19 @@ export class PollinationsService {
    * Try POST request to OpenAI-compatible Pollinations.ai endpoint
    */
   private async doApiCall(systemPrompt: string, userPrompt: string): Promise<AnalysisApiResponse> {
-    const payload = {
-      model: "openai-fast",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.7,
-      stream: false,
-      private: false,
-      response_format: { type: "json_object" }
-    };
-
-    const response = await fetch(`${this.baseUrl}/openai`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      throw this.createHttpError(response.status, `POST request failed with status ${response.status}`);
+    try {
+      return await callGeminiApi(this.geminiApiKey, systemPrompt, userPrompt);
+      // To use Pollinations:
+      // return await postToPollinationsApi(this.baseUrl, systemPrompt, userPrompt);
+    } catch (error) {
+      if (error instanceof ExtensionError) {
+        throw error;
+      }
+      throw this.createHttpError(
+        (error as any)?.status || 500,
+        (error as Error)?.message || 'POST request failed'
+      );
     }
-
-    const responseJson = await response.json();
-    console.log("Pollinations.ai response received:", responseJson);
-
-    // Extract content from OpenAI-compatible response
-    const content = responseJson?.choices?.[0]?.message?.content ?? "";
-    return parseAnalysisResponse(content);
   }
 
   /**
