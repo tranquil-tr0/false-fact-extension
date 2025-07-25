@@ -10,7 +10,6 @@ import { GoogleGenAI } from "@google/genai";
 const apiKey = process.env.GEMINI_API_KEY;
 
 export async function postToPollinationsApi(
-  baseUrl: string,
   systemPrompt: string,
   userPrompt: string
 ): Promise<AnalysisApiResponse> {
@@ -26,7 +25,8 @@ export async function postToPollinationsApi(
     response_format: { type: "json_object" }
   };
 
-  const response = await fetch(`${baseUrl}/openai`, {
+  const baseUrl = 'https://text.pollinations.ai/openai';
+  const response = await fetch(`${baseUrl}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -47,7 +47,6 @@ export async function postToPollinationsApi(
 }
 
 export async function callGeminiApi(
-  apiKey: string,
   systemPrompt: string,
   userPrompt: string
 ): Promise<AnalysisApiResponse> {

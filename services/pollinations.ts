@@ -4,7 +4,6 @@
 
 import type {
   AnalysisResult,
-  PollinationsRequest,
   PollinationsResponse,
   AnalysisApiResponse
 } from '../types/index.js';
@@ -16,7 +15,6 @@ import {
 } from '../types/index.js';
 import {
   validatePollinationsResponse,
-  parseAnalysisResponse,
   generateContentHash,
   sanitizeText
 } from '../utils/index.js';
@@ -29,10 +27,8 @@ import { postToPollinationsApi, callGeminiApi } from './api-call.js';
 
 export class PollinationsService {
   // Pollinations.ai Text API endpoints
-  private readonly baseUrl = 'https://text.pollinations.ai';
   private readonly maxRetries = 3;
   private readonly maxRetryDelay = 10000; // 10 seconds
-  private readonly geminiApiKey = 'YOUR_GEMINI_API_KEY_HERE'; // <-- Set your Gemini API key here
 
   /**
    * Analyzes text content for credibility using Pollinations.AI with comprehensive error recovery
@@ -184,9 +180,9 @@ export class PollinationsService {
    */
   private async doApiCall(systemPrompt: string, userPrompt: string): Promise<AnalysisApiResponse> {
     try {
-      return await callGeminiApi(this.geminiApiKey, systemPrompt, userPrompt);
+      return await callGeminiApi(systemPrompt, userPrompt);
       // To use Pollinations:
-      // return await postToPollinationsApi(this.baseUrl, systemPrompt, userPrompt);
+      // return await postToPollinationsApi(systemPrompt, userPrompt);
     } catch (error) {
       if (error instanceof ExtensionError) {
         throw error;
