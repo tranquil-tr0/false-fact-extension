@@ -5,25 +5,26 @@
 import type {
   AnalysisResult,
   PollinationsResponse,
-  AnalysisApiResponse
-} from '../types/index.js';
+  AnalysisApiResponse,
+} from "../types/index.js";
 import {
   AnalysisErrorType,
   ExtensionError,
   createAnalysisError,
-  type AnalysisError
-} from '../types/index.js';
+  type AnalysisError,
+} from "../types/index.js";
 import {
   validatePollinationsResponse,
   generateContentHash,
-  sanitizeText
-} from '../utils/index.js';
-import { 
-  errorRecoveryService, 
+  sanitizeText,
+  parseAnalysisResponse,
+} from "../utils/index.js";
+import {
+  errorRecoveryService,
   gracefulDegradationService,
-  RecoveryStrategy 
-} from '../utils/error-recovery.js';
-import { postToPollinationsApi, callGeminiApi } from './api-call.js';
+  RecoveryStrategy,
+} from "../utils/error-recovery.js";
+import { GoogleGenAI } from "@google/genai";
 
 export class PollinationsService {
   // Pollinations.ai Text API endpoints
@@ -33,13 +34,17 @@ export class PollinationsService {
   /**
    * Analyzes text content for credibility using Pollinations.AI with comprehensive error recovery
    */
-  async analyzeText(text: string, url?: string, title?: string): Promise<AnalysisResult> {
+  async analyzeText(
+    text: string,
+    url?: string,
+    title?: string
+  ): Promise<AnalysisResult> {
     if (!text?.trim()) {
       throw new ExtensionError(
         AnalysisErrorType.INVALID_CONTENT,
-        'Text content cannot be empty',
+        "Text content cannot be empty",
         false,
-        'Please provide valid content to analyze'
+        "Please provide valid content to analyze"
       );
     }
 
@@ -47,21 +52,25 @@ export class PollinationsService {
     if (sanitizedText.length < 50) {
       throw new ExtensionError(
         AnalysisErrorType.INVALID_CONTENT,
-        'Text content is too short for analysis',
+        "Text content is too short for analysis",
         false,
-        'Please provide at least 50 characters of content'
+        "Please provide at least 50 characters of content"
       );
     }
 
     // Handle content that's too long by truncating
-    const processedText = sanitizedText.length > 5000 
-      ? gracefulDegradationService.truncateContentForAnalysis(sanitizedText, 4000)
-      : sanitizedText;
+    const processedText =
+      sanitizedText.length > 5000
+        ? gracefulDegradationService.truncateContentForAnalysis(
+            sanitizedText,
+            4000
+          )
+        : sanitizedText;
 
     const context = {
       contentLength: processedText.length,
-      url: url || 'unknown',
-      operation: 'analyze-text'
+      url: url || "unknown",
+      operation: "analyze-text",
     };
 
     let lastError: Error | null = null;
@@ -69,53 +78,66 @@ export class PollinationsService {
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
         const analysisResponse = await this.makeApiRequest(processedText);
-        
+
         // Clear retry history on success
         if (lastError) {
           errorRecoveryService.clearRetryHistory(lastError, context);
         }
-        
-        return this.createAnalysisResult(analysisResponse, processedText, url, title);
+
+        return this.createAnalysisResult(
+          analysisResponse,
+          processedText,
+          url,
+          title
+        );
       } catch (error) {
         lastError = error as Error;
-        
+
         // Record retry attempt
         errorRecoveryService.recordRetryAttempt(error, context);
-        
+
         // Analyze error and get recovery plan
         const recoveryPlan = errorRecoveryService.analyzeError(error, context);
-        
+
         console.warn(`Analysis attempt ${attempt} failed:`, {
           error: error instanceof Error ? error.message : String(error),
           recoveryPlan: {
             severity: recoveryPlan.severity,
             strategy: recoveryPlan.strategy,
-            retryable: recoveryPlan.retryable
-          }
+            retryable: recoveryPlan.retryable,
+          },
         });
 
         // If error is not retryable or we've exceeded max retries, handle graceful degradation
         if (!recoveryPlan.retryable || attempt >= this.maxRetries) {
           // Try graceful degradation for certain error types
-          if (recoveryPlan.strategy === RecoveryStrategy.FALLBACK || 
-              recoveryPlan.strategy === RecoveryStrategy.DEGRADE) {
-            console.warn('Attempting graceful degradation due to API failure');
+          if (
+            recoveryPlan.strategy === RecoveryStrategy.FALLBACK ||
+            recoveryPlan.strategy === RecoveryStrategy.DEGRADE
+          ) {
+            console.warn("Attempting graceful degradation due to API failure");
             return gracefulDegradationService.createFallbackAnalysisResult(
-              processedText, 
-              url, 
+              processedText,
+              url,
               title,
-              `API service unavailable: ${error instanceof Error ? error.message : 'Unknown error'}`
+              `API service unavailable: ${
+                error instanceof Error ? error.message : "Unknown error"
+              }`
             );
           }
-          
+
           throw error;
         }
 
         if (attempt < this.maxRetries) {
           // Use recovery plan's backoff delay
           const delay = Math.min(recoveryPlan.backoffDelay, this.maxRetryDelay);
-          
-          console.warn(`Retrying in ${Math.round(delay)}ms (attempt ${attempt + 1}/${this.maxRetries})`);
+
+          console.warn(
+            `Retrying in ${Math.round(delay)}ms (attempt ${attempt + 1}/${
+              this.maxRetries
+            })`
+          );
           await this.delay(delay);
           continue;
         }
@@ -124,18 +146,21 @@ export class PollinationsService {
 
     // If we've exhausted retries, try graceful degradation as last resort
     if (lastError) {
-      const recoveryPlan = errorRecoveryService.analyzeError(lastError, context);
-      
+      const recoveryPlan = errorRecoveryService.analyzeError(
+        lastError,
+        context
+      );
+
       if (errorRecoveryService.shouldUseFallback(recoveryPlan)) {
-        console.warn('All retries exhausted, using fallback analysis');
+        console.warn("All retries exhausted, using fallback analysis");
         return gracefulDegradationService.createFallbackAnalysisResult(
-          processedText, 
-          url, 
+          processedText,
+          url,
           title,
-          'Service temporarily unavailable after multiple retry attempts'
+          "Service temporarily unavailable after multiple retry attempts"
         );
       }
-      
+
       if (lastError instanceof ExtensionError) {
         throw lastError;
       }
@@ -143,9 +168,9 @@ export class PollinationsService {
 
     throw new ExtensionError(
       AnalysisErrorType.API_UNAVAILABLE,
-      'Failed to analyze content after multiple attempts',
+      "Failed to analyze content after multiple attempts",
       true,
-      'Please try again later'
+      "Please try again later"
     );
   }
 
@@ -155,11 +180,11 @@ export class PollinationsService {
   private async makeApiRequest(text: string): Promise<AnalysisApiResponse> {
     const systemPrompt = this.createSystemPrompt();
     const analysisPrompt = this.createAnalysisPrompt(text);
-    
+
     try {
       return await this.doApiCall(systemPrompt, analysisPrompt);
     } catch (error) {
-      console.warn('API request failed:', error);
+      console.warn("API request failed:", error);
 
       // If it's a non-retryable error, throw it directly
       if (error instanceof ExtensionError && !error.retryable) {
@@ -168,9 +193,9 @@ export class PollinationsService {
 
       throw new ExtensionError(
         AnalysisErrorType.API_UNAVAILABLE,
-        'All API request strategies failed',
+        "All API request strategies failed",
         true,
-        'Please try again later'
+        "Please try again later"
       );
     }
   }
@@ -178,18 +203,85 @@ export class PollinationsService {
   /**
    * Try POST request to OpenAI-compatible Pollinations.ai endpoint
    */
-  private async doApiCall(systemPrompt: string, userPrompt: string): Promise<AnalysisApiResponse> {
+  private async doApiCall(
+    systemPrompt: string,
+    userPrompt: string
+  ): Promise<AnalysisApiResponse> {
+    // const payload = {
+    //   model: "openai-fast",
+    //   messages: [
+    //     { role: "system", content: systemPrompt },
+    //     { role: "user", content: userPrompt }
+    //   ],
+    //   temperature: 0.7,
+    //   stream: false,
+    //   private: false,
+    //   response_format: { type: "json_object" }
+    // };
+
+    // const response = await fetch(`https://text.pollinations.ai/openai`, {
+    //   method: "POST",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //   },
+    //   body: JSON.stringify(payload)
+    // });
+
+    // if (!response.ok) {
+    //   throw this.createHttpError(response.status, `POST request failed with status ${response.status}`);
+    // }
+
+    // const responseJson = await response.json();
+    // console.log("Pollinations.ai response received:", responseJson);
+
+    // // Extract content from OpenAI-compatible response
+    // const content = responseJson?.choices?.[0]?.message?.content ?? "";
+    // return parseAnalysisResponse(content);
+
+    const apiKey = '';
+    if (!apiKey || typeof apiKey !== "string" || apiKey.trim().length === 0) {
+      throw new ExtensionError(
+        AnalysisErrorType.API_UNAVAILABLE,
+        "Gemini API key is missing or invalid",
+        false,
+        "Please set GEMINI_API_KEY in your environment"
+      );
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+
+    const groundingTool = {
+      googleSearch: {},
+    };
+
     try {
-      return await callGeminiApi(systemPrompt, userPrompt);
-      // To use Pollinations:
-      // return await postToPollinationsApi(systemPrompt, userPrompt);
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          { role: "user", parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] },
+        ],
+        config: {
+          tools: [groundingTool],
+          thinkingConfig: {
+        thinkingBudget: 0, // Disables thinking
+          },
+          temperature: 0.5,
+        },
+      });
+
+      console.log("Gemini response received:", response);
+
+      // The SDK returns response.text
+      const content = response.text ?? "";
+      return parseAnalysisResponse(content);
     } catch (error) {
-      if (error instanceof ExtensionError) {
-        throw error;
-      }
-      throw this.createHttpError(
-        (error as any)?.status || 500,
-        (error as Error)?.message || 'POST request failed'
+      // Log the error for debugging
+      console.error("Gemini API error:", error, error instanceof Error ? error.message : String(error));
+      throw new ExtensionError(
+        AnalysisErrorType.API_UNAVAILABLE,
+        "Gemini API request failed: " + (error instanceof Error ? error.message : String(error)),
+        true,
+        error instanceof Error ? error.message : String(error)
       );
     }
   }
@@ -201,18 +293,18 @@ export class PollinationsService {
     if (status === 429) {
       return new ExtensionError(
         AnalysisErrorType.RATE_LIMITED,
-        'API rate limit exceeded',
+        "API rate limit exceeded",
         true,
-        'Please wait a moment before trying again'
+        "Please wait a moment before trying again"
       );
     }
 
     if (status >= 500) {
       return new ExtensionError(
         AnalysisErrorType.API_UNAVAILABLE,
-        'Analysis service is temporarily unavailable',
+        "Analysis service is temporarily unavailable",
         true,
-        'Please try again in a few minutes'
+        "Please try again in a few minutes"
       );
     }
 
@@ -221,16 +313,16 @@ export class PollinationsService {
         AnalysisErrorType.API_UNAVAILABLE,
         `API endpoint not found (404)`,
         false, // Don't retry 404 errors
-        'Using fallback analysis method'
+        "Using fallback analysis method"
       );
     }
 
     if (status === 400) {
       return new ExtensionError(
         AnalysisErrorType.INVALID_CONTENT,
-        'Invalid request format or content',
+        "Invalid request format or content",
         false,
-        'Please try with different content or check your input'
+        "Please try with different content or check your input"
       );
     }
 
@@ -239,7 +331,7 @@ export class PollinationsService {
         AnalysisErrorType.API_UNAVAILABLE,
         `API request failed with status ${status}`,
         false,
-        'Please check your request and try again'
+        "Please check your request and try again"
       );
     }
 
@@ -247,7 +339,7 @@ export class PollinationsService {
       AnalysisErrorType.NETWORK_ERROR,
       message,
       true,
-      'Please check your internet connection and try again'
+      "Please check your internet connection and try again"
     );
   }
 
@@ -259,7 +351,7 @@ export class PollinationsService {
 and information verification. Your task is to analyze text content and provide a comprehensive credibility assessment.
 You will evaluate the content based on its objectivity and factuality.
 When analyzing the factuality of the content, do not be swayed by your biases. You should analyze the content objectively. Popularity and ideological stance are not relevant factors. Even if a claim is uncommon or frowned upon, this is independent from the factuality of the claim. Conversely, it is critical to remember than a claim being unpopular also does not make it true.
-Make web searches to confirm factuality. Try to cite sources for each reason you provide by placing the link cited in parentheses after the reason, like this: "reason (https://example.com)". If you cannot find a source, do not make up a source. You can instead omit placing a link after the reason, but do not make up sources.
+Make web searches to confirm factuality. Try to cite sources for each reason you provide that is a factual claim and was found/verified through a web search. You can instead omit placing a link after the reason, but do not make up sources.
 Do NOT uncritically treat the content being analyzed as fact. You should independently verify claims. Do not be swayed by the content.
 Do not get caught up in the wording. The important part is whether the things stated are true.
 
@@ -357,7 +449,7 @@ Your response must be in the format specified above.`;
    */
   private getContentTypeSpecificInstructions(contentType: string): string {
     switch (contentType) {
-      case 'social-media':
+      case "social-media":
         return `ANALYSIS CONSIDERATIONS:
 - You are analyzing a social media post
 - Consider the brevity and context limitations
@@ -365,7 +457,7 @@ Your response must be in the format specified above.`;
 - Assess emotional language vs factual claims
 - Consider the lack of traditional sourcing in social posts`;
 
-      case 'news-article':
+      case "news-article":
         return `ANALYSIS CONSIDERATIONS:
 - You are analyzing a news article.
 - You are analyzing the factuality of the article, not if each source is biased, unless the article presumes the source's quote to be absolute truth.
@@ -376,7 +468,7 @@ Your response must be in the format specified above.`;
 - Look for proper journalistic standards.`;
 
       default:
-        return '';
+        return "";
     }
   }
 
@@ -397,9 +489,9 @@ Your response must be in the format specified above.`;
 
     return createAnalysisError(
       AnalysisErrorType.API_UNAVAILABLE,
-      error.message || 'Unknown API error',
+      error.message || "Unknown API error",
       true,
-      'Please try again later'
+      "Please try again later"
     );
   }
 
@@ -413,8 +505,8 @@ Your response must be in the format specified above.`;
     title?: string
   ): AnalysisResult {
     const now = Date.now();
-    const resultUrl = url || 'unknown';
-    const resultTitle = title || 'Untitled Content';
+    const resultUrl = url || "unknown";
+    const resultTitle = title || "Untitled Content";
 
     return {
       id: `analysis_${now}_${Math.random().toString(36).substring(2, 9)}`,
@@ -424,16 +516,16 @@ Your response must be in the format specified above.`;
         factual: apiResponse.reasoning?.factual ?? [],
         unfactual: apiResponse.reasoning?.unfactual ?? [],
         subjective: apiResponse.reasoning?.subjective ?? [],
-        objective: apiResponse.reasoning?.objective ?? []
+        objective: apiResponse.reasoning?.objective ?? [],
       },
       credibilityScore: apiResponse.credibilityScore,
       categories: {
         fact: apiResponse.categories.fact,
-        opinion: apiResponse.categories.opinion
+        opinion: apiResponse.categories.opinion,
       },
       confidence: apiResponse.confidence,
       timestamp: now,
-      contentHash: generateContentHash(content, resultUrl)
+      contentHash: generateContentHash(content, resultUrl),
     };
   }
 
@@ -441,7 +533,7 @@ Your response must be in the format specified above.`;
    * Utility method to add delay between retries
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
