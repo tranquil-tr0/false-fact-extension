@@ -44,11 +44,15 @@ export function validateAnalysisResult(result: any): result is AnalysisResult {
   }
 
   // Validate sources
-  if (!Array.isArray(result.sources)) return false;
-  for (const source of result.sources) {
-    if (typeof source !== 'string' || source.trim().length === 0) {
-      return false;
-    }
+  if (!('sources' in result) || !Array.isArray(result.sources)) {
+    // Treat as no sources, pass validation
+    result.sources = [];
+  }
+  // If sources is empty or contains only empty strings, treat as no sources
+  if (Array.isArray(result.sources)) {
+    const filteredSources = result.sources.filter((s: string) => typeof s === 'string' && s.trim().length > 0);
+    result.sources = filteredSources;
+    // Always pass validation, even if sources is empty
   }
 
   return true;
@@ -174,13 +178,13 @@ export function parseAnalysisResponse(content: string): AnalysisApiResponse {
       );
     }
     // Validate sources
-    if (!Array.isArray(parsed.sources)) {
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        'Missing or invalid sources field',
-        true,
-        'Try analyzing the content again'
-      );
+    if (!('sources' in parsed) || !Array.isArray(parsed.sources)) {
+      // Treat as no sources, pass validation
+      parsed.sources = [];
+    }
+    if (Array.isArray(parsed.sources)) {
+      parsed.sources = parsed.sources.filter((s: string) => typeof s === 'string' && s.trim().length > 0);
+      // Always pass validation, even if sources is empty
     }
 
     return parsed as AnalysisApiResponse;

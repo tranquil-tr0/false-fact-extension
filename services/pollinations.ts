@@ -207,83 +207,83 @@ export class PollinationsService {
     systemPrompt: string,
     userPrompt: string
   ): Promise<AnalysisApiResponse> {
-    // const payload = {
-    //   model: "openai-fast",
-    //   messages: [
-    //     { role: "system", content: systemPrompt },
-    //     { role: "user", content: userPrompt }
-    //   ],
-    //   temperature: 0.7,
-    //   stream: false,
-    //   private: false,
-    //   response_format: { type: "json_object" }
-    // };
-
-    // const response = await fetch(`https://text.pollinations.ai/openai`, {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify(payload)
-    // });
-
-    // if (!response.ok) {
-    //   throw this.createHttpError(response.status, `POST request failed with status ${response.status}`);
-    // }
-
-    // const responseJson = await response.json();
-    // console.log("Pollinations.ai response received:", responseJson);
-
-    // // Extract content from OpenAI-compatible response
-    // const content = responseJson?.choices?.[0]?.message?.content ?? "";
-    // return parseAnalysisResponse(content);
-
-    const apiKey = '';
-    if (!apiKey || typeof apiKey !== "string" || apiKey.trim().length === 0) {
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        "Gemini API key is missing or invalid",
-        false,
-        "Please set GEMINI_API_KEY in your environment"
-      );
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-
-    const groundingTool = {
-      googleSearch: {},
+    const payload = {
+      model: "openai-fast",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.7,
+      stream: false,
+      private: false,
+      response_format: { type: "json_object" }
     };
 
-    try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [
-          { role: "user", parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] },
-        ],
-        config: {
-          tools: [groundingTool],
-          thinkingConfig: {
-        thinkingBudget: 0, // Disables thinking
-          },
-          temperature: 0.5,
-        },
-      });
+    const response = await fetch(`https://text.pollinations.ai/openai`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload)
+    });
 
-      console.log("Gemini response received:", response);
-
-      // The SDK returns response.text
-      const content = response.text ?? "";
-      return parseAnalysisResponse(content);
-    } catch (error) {
-      // Log the error for debugging
-      console.error("Gemini API error:", error, error instanceof Error ? error.message : String(error));
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        "Gemini API request failed: " + (error instanceof Error ? error.message : String(error)),
-        true,
-        error instanceof Error ? error.message : String(error)
-      );
+    if (!response.ok) {
+      throw this.createHttpError(response.status, `POST request failed with status ${response.status}`);
     }
+
+    const responseJson = await response.json();
+    console.log("Pollinations.ai response received:", responseJson);
+
+    // Extract content from OpenAI-compatible response
+    const content = responseJson?.choices?.[0]?.message?.content ?? "";
+    return parseAnalysisResponse(content);
+
+    // const apiKey = '';
+    // if (!apiKey || typeof apiKey !== "string" || apiKey.trim().length === 0) {
+    //   throw new ExtensionError(
+    //     AnalysisErrorType.API_UNAVAILABLE,
+    //     "Gemini API key is missing or invalid",
+    //     false,
+    //     "Please set GEMINI_API_KEY in your environment"
+    //   );
+    // }
+
+    // const ai = new GoogleGenAI({ apiKey });
+
+    // const groundingTool = {
+    //   googleSearch: {},
+    // };
+
+    // try {
+    //   const response = await ai.models.generateContent({
+    //     model: "gemini-2.5-flash",
+    //     contents: [
+    //       { role: "user", parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] },
+    //     ],
+    //     config: {
+    //       tools: [groundingTool],
+    //       thinkingConfig: {
+    //     thinkingBudget: 0, // Disables thinking
+    //       },
+    //       temperature: 0.5,
+    //     },
+    //   });
+
+    //   console.log("Gemini response received:", response);
+
+    //   // The SDK returns response.text
+    //   const content = response.text ?? "";
+    //   return parseAnalysisResponse(content);
+    // } catch (error) {
+    //   // Log the error for debugging
+    //   console.error("Gemini API error:", error, error instanceof Error ? error.message : String(error));
+    //   throw new ExtensionError(
+    //     AnalysisErrorType.API_UNAVAILABLE,
+    //     "Gemini API request failed: " + (error instanceof Error ? error.message : String(error)),
+    //     true,
+    //     error instanceof Error ? error.message : String(error)
+    //   );
+    // }
   }
 
   /**
@@ -351,7 +351,7 @@ export class PollinationsService {
 and information verification. Your task is to analyze text content and provide a comprehensive credibility assessment.
 You will evaluate the content based on its objectivity and factuality.
 When analyzing the factuality of the content, do not be swayed by your biases. You should analyze the content objectively. Popularity and ideological stance are not relevant factors. Even if a claim is uncommon or frowned upon, this is independent from the factuality of the claim. Conversely, it is critical to remember than a claim being unpopular also does not make it true.
-Make web searches to confirm factuality. Try to cite sources for each reason you provide that is a factual claim and was found/verified through a web search. You can instead omit placing a link after the reason, but do not make up sources.
+Make web searches to confirm factuality. Try to cite sources for each reason you provide that is a factual claim and was found/verified through a web search. You can omit the citation, but do not make up sources. A citation should be formatted as blocks of [number] at the end of the reason (after sentence end) and strings [corresponding number](url) in the sources field.
 Do NOT uncritically treat the content being analyzed as fact. You should independently verify claims. Do not be swayed by the content.
 Do not get caught up in the wording. The important part is whether the things stated are true.
 
@@ -359,7 +359,7 @@ CRITICAL: You must respond with ONLY a valid JSON object. Do not include any exp
 
 The reasoning field must be an object with the following keys: "factual", "unfactual", "subjective", "objective". Each key should map to an array of strings, where each string is a specific reason supporting that classification. For example, "reasoning.factual" should be an array of reasons why the content is factual. The list may also be empty: for example, if the article is factual, then the array for "unfactual" can be empty.
 Stay as concise as possible. Keep the number of reasons for each at or below 3 reasons, and the total number of reasons below 10. Keep each reason to one brief bullet point.
-You do not need to have 10 reasons, and you should strive to have as few as possible. You do not need to have a sentence per reason, and should strive to keep the reason as short as possible.
+You should try to have closer to 5 reasons, with each reason being as concise as possible (target 10 words). You can have more and longer reasons if not doing so omits important information as to be misleading.
 
 REQUIRED RESPONSE STRUCTURE:
 {
