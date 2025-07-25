@@ -29,8 +29,8 @@ export interface ApiResponse<T> {
 export interface AnalysisApiResponse {
   credibilityScore: number;
   categories: {
-    fact: number;
-    opinion: number;
+    factuality: number;
+    objectivity: number;
   };
   confidence: number;
   reasoning: {
@@ -39,6 +39,7 @@ export interface AnalysisApiResponse {
     subjective: string[];
     objective: string[];
   };
+  sources: string[];
 }
 
 export interface ContentScript {

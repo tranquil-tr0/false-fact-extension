@@ -40,12 +40,12 @@ export class BalanceVisualization {
       </div>
       <div class="balance-bar-container">
         <div class="balance-bar" role="group" aria-labelledby="balance-visualization-title">
-          <div class="balance-segment fact-segment" data-category="fact" role="meter" aria-label="Factual content percentage" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-            <span class="segment-label">Fact</span>
+          <div class="balance-segment factuality-segment" data-category="factuality" role="meter" aria-label="Factuality content percentage" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <span class="segment-label">Factuality</span>
             <span class="segment-percentage">0%</span>
           </div>
-          <div class="balance-segment opinion-segment" data-category="opinion" role="meter" aria-label="Opinion content percentage" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-            <span class="segment-label">Opinion</span>
+          <div class="balance-segment objectivity-segment" data-category="objectivity" role="meter" aria-label="Objectivity content percentage" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <span class="segment-label">Objectivity</span>
             <span class="segment-percentage">0%</span>
           </div>
         </div>
@@ -65,8 +65,8 @@ export class BalanceVisualization {
     const { categories, credibilityScore, confidence } = analysisResult;
     
     // Update segment widths and labels
-    this.updateSegment('fact', categories.fact);
-    this.updateSegment('opinion', categories.opinion);
+    this.updateSegment('factuality', categories.factuality);
+    this.updateSegment('objectivity', categories.objectivity);
     
     // Update overall credibility score
     this.updateCredibilityScore(credibilityScore, confidence);
@@ -75,7 +75,7 @@ export class BalanceVisualization {
     this.updateCredibilityLevel(credibilityScore);
   }
 
-  private updateSegment(category: 'fact' | 'opinion', percentage: number): void {
+  private updateSegment(category: 'factuality' | 'objectivity', percentage: number): void {
     const segment = this.container.querySelector(`[data-category="${category}"]`) as HTMLElement;
     if (!segment) return;
 

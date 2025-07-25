@@ -39,7 +39,7 @@ interface AnalysisWorkflow {
 class BackgroundService {
   private activeWorkflows = new Map<string, AnalysisWorkflow>();
   private readonly maxRetries = 3;
-  private readonly analysisTimeout = 30000; // 30 seconds
+  private readonly analysisTimeout = 60000; // 60 seconds
 
   constructor() {
     this.setupMessageHandlers();

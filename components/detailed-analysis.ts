@@ -62,13 +62,13 @@ export class DetailedAnalysis {
         <div class="category-breakdown">
           <h5 id="category-breakdown-heading">Category Breakdown</h5>
           <div class="category-details" role="group" aria-labelledby="category-breakdown-heading">
-            <div class="category-item fact-category">
+            <div class="category-item factuality-category">
               <div class="category-header">
-                <span class="category-name" id="fact-category-label">Factual Content</span>
-                <span class="category-percentage" aria-labelledby="fact-category-label">--</span>
+                <span class="category-name" id="factuality-category-label">Factuality Content</span>
+                <span class="category-percentage" aria-labelledby="factuality-category-label">--</span>
               </div>
               <div class="category-confidence">
-                <div class="confidence-indicator" role="meter" aria-label="Factual content confidence level" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                <div class="confidence-indicator" role="meter" aria-label="Factuality content confidence level" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                   <div class="confidence-dots">
                     <span class="dot" aria-hidden="true"></span>
                     <span class="dot" aria-hidden="true"></span>
@@ -79,13 +79,13 @@ export class DetailedAnalysis {
                 </div>
               </div>
             </div>
-            <div class="category-item opinion-category">
+            <div class="category-item objectivity-category">
               <div class="category-header">
-                <span class="category-name" id="opinion-category-label">Opinion Content</span>
-                <span class="category-percentage" aria-labelledby="opinion-category-label">--</span>
+                <span class="category-name" id="objectivity-category-label">Objectivity Content</span>
+                <span class="category-percentage" aria-labelledby="objectivity-category-label">--</span>
               </div>
               <div class="category-confidence">
-                <div class="confidence-indicator" role="meter" aria-label="Opinion content confidence level" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                <div class="confidence-indicator" role="meter" aria-label="Objectivity content confidence level" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                   <div class="confidence-dots">
                     <span class="dot" aria-hidden="true"></span>
                     <span class="dot" aria-hidden="true"></span>
@@ -268,12 +268,12 @@ export class DetailedAnalysis {
       .replace(/^(.*)$/, '<p>$1</p>'); // Wrap in paragraph
   }
 
-  private updateCategoryBreakdown(categories: { fact: number; opinion: number }, confidence: number): void {
-    this.updateCategoryItem('fact', categories.fact, confidence);
-    this.updateCategoryItem('opinion', categories.opinion, confidence);
+  private updateCategoryBreakdown(categories: { factuality: number; objectivity: number }, confidence: number): void {
+    this.updateCategoryItem('factuality', categories.factuality, confidence);
+    this.updateCategoryItem('objectivity', categories.objectivity, confidence);
   }
 
-  private updateCategoryItem(category: 'fact' | 'opinion', percentage: number, confidence: number): void {
+  private updateCategoryItem(category: 'factuality' | 'objectivity', percentage: number, confidence: number): void {
     const categoryItem = this.container.querySelector(`.${category}-category`);
     if (!categoryItem) return;
 

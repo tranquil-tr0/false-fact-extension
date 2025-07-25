@@ -8,8 +8,8 @@ export interface AnalysisResult {
   title: string;
   credibilityScore: number; // Overall score 0-100
   categories: {
-    fact: number;      // Percentage 0-100
-    opinion: number;   // Percentage 0-100
+    factuality: number;      // Percentage 0-100
+    objectivity: number;   // Percentage 0-100
   };
   confidence: number;  // AI confidence 0-100
   reasoning: {
@@ -20,6 +20,7 @@ export interface AnalysisResult {
   };   // Explanation of analysis
   timestamp: number;
   contentHash: string; // For caching
+  sources: string[];
 }
 
 export interface ExtractedContent {

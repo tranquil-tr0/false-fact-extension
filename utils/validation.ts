@@ -12,7 +12,7 @@ import { AnalysisErrorType, ExtensionError } from '../types/errors.js';
 export function validateAnalysisResult(result: any): result is AnalysisResult {
   if (!result || typeof result !== 'object') return false;
 
-  const requiredFields = ['id', 'url', 'title', 'credibilityScore', 'categories', 'confidence', 'reasoning', 'timestamp', 'contentHash'];
+  const requiredFields = ['id', 'url', 'title', 'credibilityScore', 'categories', 'confidence', 'reasoning', 'timestamp', 'contentHash', 'sources'];
   
   for (const field of requiredFields) {
     if (!(field in result)) return false;
@@ -29,20 +29,26 @@ export function validateAnalysisResult(result: any): result is AnalysisResult {
 
   // Validate categories
   if (!result.categories || typeof result.categories !== 'object') return false;
-  
-  const { fact, opinion, false: falseValue } = result.categories;
-  if (typeof fact !== 'number' || typeof opinion !== 'number' || typeof falseValue !== 'number') {
+  const { factuality, objectivity, false: falseValue } = result.categories;
+  if (typeof factuality !== 'number' || typeof objectivity !== 'number' || typeof falseValue !== 'number') {
     return false;
   }
-
-  if (fact < 0 || fact > 100 || opinion < 0 || opinion > 100 || falseValue < 0 || falseValue > 100) {
+  if (factuality < 0 || factuality > 100 || objectivity < 0 || objectivity > 100 || falseValue < 0 || falseValue > 100) {
     return false;
   }
 
   // Categories should roughly sum to 100 (allow some tolerance for rounding)
-  const sum = fact + opinion + falseValue;
+  const sum = factuality + objectivity + falseValue;
   if (Math.abs(sum - 100) > 5) {
     return false;
+  }
+
+  // Validate sources
+  if (!Array.isArray(result.sources)) return false;
+  for (const source of result.sources) {
+    if (typeof source !== 'string' || source.trim().length === 0) {
+      return false;
+    }
   }
 
   return true;
@@ -150,9 +156,8 @@ export function parseAnalysisResponse(content: string): AnalysisApiResponse {
         'Try analyzing the content again'
       );
     }
-
-    const { fact, opinion } = parsed.categories;
-    if (typeof fact !== 'number' || typeof opinion !== 'number') {
+    const { factuality, objectivity } = parsed.categories;
+    if (typeof factuality !== 'number' || typeof objectivity !== 'number') {
       throw new ExtensionError(
         AnalysisErrorType.API_UNAVAILABLE,
         'Invalid category values in response',
@@ -160,11 +165,19 @@ export function parseAnalysisResponse(content: string): AnalysisApiResponse {
         'Try analyzing the content again'
       );
     }
-
-    if (fact < 0 || fact > 100 || opinion < 0 || opinion > 100) {
+    if (factuality < 0 || factuality > 100 || objectivity < 0 || objectivity > 100) {
       throw new ExtensionError(
         AnalysisErrorType.API_UNAVAILABLE,
         'Category values out of range',
+        true,
+        'Try analyzing the content again'
+      );
+    }
+    // Validate sources
+    if (!Array.isArray(parsed.sources)) {
+      throw new ExtensionError(
+        AnalysisErrorType.API_UNAVAILABLE,
+        'Missing or invalid sources field',
         true,
         'Try analyzing the content again'
       );

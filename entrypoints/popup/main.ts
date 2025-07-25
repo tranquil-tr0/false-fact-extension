@@ -378,19 +378,19 @@ function createResultsHTML(result: AnalysisResult): string {
       
       <div class="category-breakdown">
         <div class="category-item">
-          <div class="category-label">Factual</div>
+          <div class="category-label">Factuality</div>
           <div class="category-bar">
-            <div class="category-fill fact" style="width: ${result.categories.fact}%"></div>
+            <div class="category-fill fact" style="width: ${result.categories.factuality}%"></div>
           </div>
-          <div class="category-percentage">${result.categories.fact}%</div>
+          <div class="category-percentage">${result.categories.factuality}%</div>
         </div>
         
         <div class="category-item">
-          <div class="category-label">Opinion</div>
+          <div class="category-label">Objectivity</div>
           <div class="category-bar">
-            <div class="category-fill opinion" style="width: ${result.categories.opinion}%"></div>
+            <div class="category-fill opinion" style="width: ${result.categories.objectivity}%"></div>
           </div>
-          <div class="category-percentage">${result.categories.opinion}%</div>
+          <div class="category-percentage">${result.categories.objectivity}%</div>
         </div>
         
       </div>
@@ -730,8 +730,8 @@ function handleShareResults() {
 
   const shareText = `Fact-check results for ${state.currentUrl}:\n` +
     `Credibility: ${state.analysisResult.credibilityScore}%\n` +
-    `Factual: ${state.analysisResult.categories.fact}% | ` +
-    `Opinion: ${state.analysisResult.categories.opinion}%`;
+    `Factuality: ${state.analysisResult.categories.factuality}% | ` +
+    `Objectivity: ${state.analysisResult.categories.objectivity}%`;
 
   // Copy to clipboard
   navigator.clipboard.writeText(shareText).then(() => {

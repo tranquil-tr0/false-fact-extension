@@ -369,12 +369,12 @@ REQUIRED RESPONSE STRUCTURE:
     "subjective": [ "reason 1", ... ],
     "objective": [ "reason 1", ... ]
   },
-  "credibilityScore": <number 0-100>,
-  "categories": {
-    "fact": <percentage 0-100>,
-    "opinion": <percentage 0-100>
+  "credibilityScore": <number 0-100>,  "categories": {
+    "factuality": <percentage 0-100>,
+    "objectivity": <percentage 0-100>
   },
   "confidence": <number 0-100>
+  "sources": [ "[1](https:/...)", "[2](https:/...)" ]
 }
 
 SCORING GUIDELINES:
@@ -388,8 +388,8 @@ credibilityScore (0-100):
 - 0-29: The content is factually innacurate, and the truth is unrelated to or opposite of the main claim
 
 categories:
-- fact: Whether the content is factually accurate.
-- opinion: Whether the content is objective. Reporting on an event is 0% opinion, while an opinion piece is 100% opinion.
+- factuality: Whether the content is factually accurate.
+- objectivity: Whether the content is objective. Reporting on an event is 100% objectivity, while an opinion piece is 0% objectivity.
 
 confidence (0-100):
 - 90-100: Very confident in assessment, clear indicators present
@@ -520,9 +520,10 @@ Your response must be in the format specified above.`;
       },
       credibilityScore: apiResponse.credibilityScore,
       categories: {
-        fact: apiResponse.categories.fact,
-        opinion: apiResponse.categories.opinion,
+        factuality: apiResponse.categories.factuality,
+        objectivity: apiResponse.categories.objectivity,
       },
+      sources: apiResponse.sources ?? [],
       confidence: apiResponse.confidence,
       timestamp: now,
       contentHash: generateContentHash(content, resultUrl),

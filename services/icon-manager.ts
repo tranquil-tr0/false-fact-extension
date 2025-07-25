@@ -223,11 +223,11 @@ export class IconManager {
     const score = result.credibilityScore;
     
     // Determine primary content type based on categories
-    const { fact, opinion } = result.categories;
-    const maxCategory = Math.max(fact, opinion);
+    const { factuality, objectivity } = result.categories;
+    const maxCategory = Math.max(factuality, objectivity);
     
     // High credibility (70+ score and primarily factual)
-    if (score >= 70 && fact === maxCategory) {
+    if (score >= 70 && factuality === maxCategory) {
       return {
         type: 'high-credibility',
         badgeText: '✓',
@@ -245,7 +245,7 @@ export class IconManager {
     }
     
     // Opinion-based content (primarily opinion or moderate score)
-    if (opinion === maxCategory || (score >= 40 && score < 70)) {
+    if (objectivity === maxCategory || (score >= 40 && score < 70)) {
       return {
         type: 'opinion',
         badgeText: '?',
