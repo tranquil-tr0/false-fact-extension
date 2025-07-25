@@ -4,8 +4,6 @@
 
 import type {
   AnalysisResult,
-  PollinationsResponse,
-  AnalysisApiResponse,
 } from "../types/index.js";
 import {
   AnalysisErrorType,
@@ -177,7 +175,7 @@ export class PollinationsService {
   /**
    * Makes the actual API request to Pollinations.AI with multiple fallback strategies
    */
-  private async makeApiRequest(text: string): Promise<AnalysisApiResponse> {
+  private async makeApiRequest(text: string): Promise<any> {
     const systemPrompt = this.createSystemPrompt();
     const analysisPrompt = this.createAnalysisPrompt(text);
 
@@ -206,7 +204,7 @@ export class PollinationsService {
   private async doApiCall(
     systemPrompt: string,
     userPrompt: string
-  ): Promise<AnalysisApiResponse> {
+  ): Promise<any> {
     const payload = {
       model: "openai-fast",
       messages: [
@@ -475,7 +473,7 @@ Your response must be in the format specified above.`;
   /**
    * Validates the API response structure
    */
-  validateApiResponse(response: any): response is PollinationsResponse {
+  validateApiResponse(response: any): boolean {
     return validatePollinationsResponse(response);
   }
 
@@ -499,7 +497,7 @@ Your response must be in the format specified above.`;
    * Creates an AnalysisResult from the API response
    */
   private createAnalysisResult(
-    apiResponse: AnalysisApiResponse,
+    apiResponse: any,
     content: string,
     url?: string,
     title?: string

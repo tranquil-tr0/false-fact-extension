@@ -4,18 +4,20 @@
 
 import { AnalysisResult } from '../types/models.js';
 
-export interface DetailedAnalysisOptions {
-  expandable?: boolean;
-  showConfidenceIndicators?: boolean;
-  maxReasoningLength?: number;
-}
-
 export class DetailedAnalysis {
   private container: HTMLElement;
-  private options: Required<DetailedAnalysisOptions>;
   private isExpanded: boolean = false;
+  private options: {
+    expandable: boolean;
+    showConfidenceIndicators: boolean;
+    maxReasoningLength: number;
+  };
 
-  constructor(container: HTMLElement, options: DetailedAnalysisOptions = {}) {
+  constructor(container: HTMLElement, options: {
+    expandable?: boolean;
+    showConfidenceIndicators?: boolean;
+    maxReasoningLength?: number;
+  } = {}) {
     this.container = container;
     this.options = {
       expandable: options.expandable ?? true,

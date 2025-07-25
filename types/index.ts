@@ -19,15 +19,3 @@ export {
   createAnalysisError
 } from './errors.js';
 export type { AnalysisError } from './errors.js';
-
-// API interfaces
-export type {
-  PollinationsRequest,
-  PollinationsResponse,
-  ApiResponse,
-  AnalysisApiResponse,
-  ContentScript,
-  BackgroundService,
-  PopupController,
-  PollinationsService
-} from './api.js';

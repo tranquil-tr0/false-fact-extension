@@ -4,20 +4,24 @@
 
 import { AnalysisResult } from '../types/models.js';
 
-export interface BalanceVisualizationOptions {
-  width?: number;
-  height?: number;
-  showLabels?: boolean;
-  showPercentages?: boolean;
-  animated?: boolean;
-}
-
 export class BalanceVisualization {
   private container: HTMLElement;
-  private options: Required<BalanceVisualizationOptions>;
+  private options: Required<{
+    width?: number;
+    height?: number;
+    showLabels?: boolean;
+    showPercentages?: boolean;
+    animated?: boolean;
+  }>;
   private animationDuration = 800; // ms
 
-  constructor(container: HTMLElement, options: BalanceVisualizationOptions = {}) {
+  constructor(container: HTMLElement, options: {
+    width?: number;
+    height?: number;
+    showLabels?: boolean;
+    showPercentages?: boolean;
+    animated?: boolean;
+  } = {}) {
     this.container = container;
     this.options = {
       width: options.width ?? 300,

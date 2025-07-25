@@ -3,7 +3,6 @@
  */
 
 import type { AnalysisResult, AnalysisRequest } from '../types/models.js';
-import type { PollinationsResponse, AnalysisApiResponse } from '../types/api.js';
 import { AnalysisErrorType, ExtensionError } from '../types/errors.js';
 
 /**
@@ -77,13 +76,11 @@ export function validateAnalysisRequest(request: any): request is AnalysisReques
 /**
  * Validates Pollinations API response structure
  */
-export function validatePollinationsResponse(response: any): response is PollinationsResponse {
+export function validatePollinationsResponse(response: any): boolean {
   if (!response || typeof response !== 'object') return false;
-
   if (!Array.isArray(response.choices) || response.choices.length === 0) {
     return false;
   }
-
   const firstChoice = response.choices[0];
   return !!(
     firstChoice &&
@@ -97,7 +94,7 @@ export function validatePollinationsResponse(response: any): response is Pollina
 /**
  * Parses and validates analysis response from AI
  */
-export function parseAnalysisResponse(content: string): AnalysisApiResponse {
+export function parseAnalysisResponse(content: string): any {
   // Clean up the content - sometimes AI responses have extra text before/after JSON
   let cleanContent = content.trim();
   
@@ -187,7 +184,7 @@ export function parseAnalysisResponse(content: string): AnalysisApiResponse {
       // Always pass validation, even if sources is empty
     }
 
-    return parsed as AnalysisApiResponse;
+    return parsed;
   } catch (error) {
     if (error instanceof ExtensionError) {
       throw error;
