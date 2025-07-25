@@ -11,12 +11,14 @@ export async function webSearchJina(query: string): Promise<string> {
  * Pollinations.AI API service for content analysis
  */
 
+// Import the Jina web search tool schema
 import type {
   AnalysisResult,
   PollinationsRequest,
   PollinationsResponse,
   AnalysisApiResponse
 } from '../types/index.js';
+import { WEB_SEARCH_TOOL_SCHEMA } from '../types/api.js';
 import {
   AnalysisErrorType,
   ExtensionError,
@@ -57,7 +59,7 @@ export class PollinationsService {
         'Please provide valid content to analyze'
       );
     }
-
+ 
     const sanitizedText = sanitizeText(text);
     if (sanitizedText.length < 50) {
       throw new ExtensionError(
@@ -67,39 +69,42 @@ export class PollinationsService {
         'Please provide at least 50 characters of content'
       );
     }
-
+ 
     // Handle content that's too long by truncating
-    const processedText = sanitizedText.length > 5000 
+    const processedText = sanitizedText.length > 5000
       ? gracefulDegradationService.truncateContentForAnalysis(sanitizedText, 4000)
       : sanitizedText;
-
+ 
     const context = {
       contentLength: processedText.length,
       url: url || 'unknown',
       operation: 'analyze-text'
     };
-
+ 
     let lastError: Error | null = null;
-
+    // Always include the Jina web search tool
+    // Use the schema as-is, with strict: true
+    const tools = [WEB_SEARCH_TOOL_SCHEMA];
+ 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        const analysisResponse = await this.makeApiRequest(processedText);
-        
+        const analysisResponse = await this.makeApiRequest(processedText, tools);
+ 
         // Clear retry history on success
         if (lastError) {
           errorRecoveryService.clearRetryHistory(lastError, context);
         }
-        
+ 
         return this.createAnalysisResult(analysisResponse, processedText, url, title);
       } catch (error) {
         lastError = error as Error;
-        
+ 
         // Record retry attempt
         errorRecoveryService.recordRetryAttempt(error, context);
-        
+ 
         // Analyze error and get recovery plan
         const recoveryPlan = errorRecoveryService.analyzeError(error, context);
-        
+ 
         console.warn(`Analysis attempt ${attempt} failed:`, {
           error: error instanceof Error ? error.message : String(error),
           recoveryPlan: {
@@ -108,16 +113,16 @@ export class PollinationsService {
             retryable: recoveryPlan.retryable
           }
         });
-
+ 
         // If error is not retryable or we've exceeded max retries, handle graceful degradation
         if (!recoveryPlan.retryable || attempt >= this.maxRetries) {
           // Try graceful degradation for certain error types
-          if (recoveryPlan.strategy === RecoveryStrategy.FALLBACK || 
+          if (recoveryPlan.strategy === RecoveryStrategy.FALLBACK ||
               recoveryPlan.strategy === RecoveryStrategy.DEGRADE) {
             console.warn('Attempting graceful degradation due to API failure');
             return gracefulDegradationService.createFallbackAnalysisResult(
-              processedText, 
-              url, 
+              processedText,
+              url,
               title,
               `API service unavailable: ${error instanceof Error ? error.message : 'Unknown error'}`
             );
@@ -125,7 +130,7 @@ export class PollinationsService {
           
           throw error;
         }
-
+ 
         if (attempt < this.maxRetries) {
           // Use recovery plan's backoff delay
           const delay = Math.min(recoveryPlan.backoffDelay, this.maxRetryDelay);
@@ -136,7 +141,7 @@ export class PollinationsService {
         }
       }
     }
-
+ 
     // If we've exhausted retries, try graceful degradation as last resort
     if (lastError) {
       const recoveryPlan = errorRecoveryService.analyzeError(lastError, context);
@@ -144,8 +149,8 @@ export class PollinationsService {
       if (errorRecoveryService.shouldUseFallback(recoveryPlan)) {
         console.warn('All retries exhausted, using fallback analysis');
         return gracefulDegradationService.createFallbackAnalysisResult(
-          processedText, 
-          url, 
+          processedText,
+          url,
           title,
           'Service temporarily unavailable after multiple retry attempts'
         );
@@ -155,7 +160,7 @@ export class PollinationsService {
         throw lastError;
       }
     }
-
+ 
     throw new ExtensionError(
       AnalysisErrorType.API_UNAVAILABLE,
       'Failed to analyze content after multiple attempts',
@@ -167,12 +172,12 @@ export class PollinationsService {
   /**
    * Makes the actual API request to Pollinations.AI with multiple fallback strategies
    */
-  private async makeApiRequest(text: string): Promise<AnalysisApiResponse> {
+  private async makeApiRequest(text: string, tools?: any[]): Promise<AnalysisApiResponse> {
     const systemPrompt = this.createSystemPrompt();
     const analysisPrompt = this.createAnalysisPrompt(text);
     
     try {
-      return await this.doApiCall(systemPrompt, analysisPrompt);
+      return await this.doApiCall(systemPrompt, analysisPrompt, tools);
     } catch (error) {
       console.warn('API request failed:', error);
 
@@ -193,8 +198,8 @@ export class PollinationsService {
   /**
    * Try POST request to OpenAI-compatible Pollinations.ai endpoint
    */
-  private async doApiCall(systemPrompt: string, userPrompt: string): Promise<AnalysisApiResponse> {
-    const payload = {
+  private async doApiCall(systemPrompt: string, userPrompt: string, tools?: any[]): Promise<AnalysisApiResponse> {
+    const payload: any = {
       model: "openai-fast",
       messages: [
         { role: "system", content: systemPrompt },
@@ -205,14 +210,13 @@ export class PollinationsService {
       private: false,
       response_format: { type: "json_object" }
     };
+    if (tools) {
+      payload.tools = tools;
+    }
 
-    console.debug("[API DEBUG] POST", `${this.baseUrl}/openai`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload)
-    });
+    console.debug("[API DEBUG] Pollinations tool schema:", JSON.stringify(tools, null, 2));
+    console.debug("[API DEBUG] Pollinations payload:", JSON.stringify(payload, null, 2));
+    
     const response = await fetch(`${this.baseUrl}/openai`, {
       method: "POST",
       headers: {
@@ -220,6 +224,7 @@ export class PollinationsService {
       },
       body: JSON.stringify(payload)
     });
+    console.debug("[API DEBUG] POST", `${this.baseUrl}/openai`, response);
 
     if (!response.ok) {
       throw this.createHttpError(response.status, `POST request failed with status ${response.status}`);
