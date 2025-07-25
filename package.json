@@ -23,7 +23,7 @@
     "jsdom": "^26.1.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4",
-    "wxt": "^0.20.6"
+    "wxt": "^0.20.7"
   },
   "dependencies": {
     "@google/genai": "^1.11.0",
