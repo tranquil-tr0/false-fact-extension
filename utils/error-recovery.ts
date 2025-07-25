@@ -453,8 +453,8 @@ export class GracefulDegradationService {
             title: title || 'Untitled Content',
             credibilityScore: 0,
             categories: {
-                fact: 0,
-                opinion: 0
+                factuality: 0,
+                objectivity: 0
             },
             confidence: 0, // No confidence for error state
             reasoning: {

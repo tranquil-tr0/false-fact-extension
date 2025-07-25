@@ -20,7 +20,7 @@ export interface AnalysisResult {
   };   // Explanation of analysis
   timestamp: number;
   contentHash: string; // For caching
-  sources: string[];
+  sources?: string[];
 }
 
 export interface ExtractedContent {
