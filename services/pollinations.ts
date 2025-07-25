@@ -1,24 +1,13 @@
-// Web search function for tool use (Jina s.jina.ai)
-export async function webSearchJina(query: string): Promise<string> {
-  const encoded = encodeURIComponent(query);
-  const url = `https://s.jina.ai/${encoded}`;
-  console.debug("[API DEBUG] GET", url, { method: "GET" });
-  const resp = await fetch(url, { method: "GET" });
-  if (!resp.ok) throw new Error(`Web search failed: ${resp.status}`);
-  return await resp.text();
-}
 /**
  * Pollinations.AI API service for content analysis
  */
 
-// Import the Jina web search tool schema
 import type {
   AnalysisResult,
   PollinationsRequest,
   PollinationsResponse,
   AnalysisApiResponse
 } from '../types/index.js';
-import { WEB_SEARCH_TOOL_SCHEMA } from '../types/api.js';
 import {
   AnalysisErrorType,
   ExtensionError,
@@ -29,10 +18,6 @@ import {
   validatePollinationsResponse,
   parseAnalysisResponse,
   generateContentHash,
-  /**
-   * Handles tool calls (function calling) for supported tools.
-   * Currently supports the "web_search" tool using Jina s.jina.ai.
-   */
   sanitizeText
 } from '../utils/index.js';
 import { 
@@ -59,7 +44,7 @@ export class PollinationsService {
         'Please provide valid content to analyze'
       );
     }
- 
+
     const sanitizedText = sanitizeText(text);
     if (sanitizedText.length < 50) {
       throw new ExtensionError(
@@ -69,42 +54,39 @@ export class PollinationsService {
         'Please provide at least 50 characters of content'
       );
     }
- 
+
     // Handle content that's too long by truncating
-    const processedText = sanitizedText.length > 5000
+    const processedText = sanitizedText.length > 5000 
       ? gracefulDegradationService.truncateContentForAnalysis(sanitizedText, 4000)
       : sanitizedText;
- 
+
     const context = {
       contentLength: processedText.length,
       url: url || 'unknown',
       operation: 'analyze-text'
     };
- 
+
     let lastError: Error | null = null;
-    // Always include the Jina web search tool
-    // Use the schema as-is, with strict: true
-    const tools = [WEB_SEARCH_TOOL_SCHEMA];
- 
+
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        const analysisResponse = await this.makeApiRequest(processedText, tools);
- 
+        const analysisResponse = await this.makeApiRequest(processedText);
+        
         // Clear retry history on success
         if (lastError) {
           errorRecoveryService.clearRetryHistory(lastError, context);
         }
- 
+        
         return this.createAnalysisResult(analysisResponse, processedText, url, title);
       } catch (error) {
         lastError = error as Error;
- 
+        
         // Record retry attempt
         errorRecoveryService.recordRetryAttempt(error, context);
- 
+        
         // Analyze error and get recovery plan
         const recoveryPlan = errorRecoveryService.analyzeError(error, context);
- 
+        
         console.warn(`Analysis attempt ${attempt} failed:`, {
           error: error instanceof Error ? error.message : String(error),
           recoveryPlan: {
@@ -113,16 +95,16 @@ export class PollinationsService {
             retryable: recoveryPlan.retryable
           }
         });
- 
+
         // If error is not retryable or we've exceeded max retries, handle graceful degradation
         if (!recoveryPlan.retryable || attempt >= this.maxRetries) {
           // Try graceful degradation for certain error types
-          if (recoveryPlan.strategy === RecoveryStrategy.FALLBACK ||
+          if (recoveryPlan.strategy === RecoveryStrategy.FALLBACK || 
               recoveryPlan.strategy === RecoveryStrategy.DEGRADE) {
             console.warn('Attempting graceful degradation due to API failure');
             return gracefulDegradationService.createFallbackAnalysisResult(
-              processedText,
-              url,
+              processedText, 
+              url, 
               title,
               `API service unavailable: ${error instanceof Error ? error.message : 'Unknown error'}`
             );
@@ -130,7 +112,7 @@ export class PollinationsService {
           
           throw error;
         }
- 
+
         if (attempt < this.maxRetries) {
           // Use recovery plan's backoff delay
           const delay = Math.min(recoveryPlan.backoffDelay, this.maxRetryDelay);
@@ -141,7 +123,7 @@ export class PollinationsService {
         }
       }
     }
- 
+
     // If we've exhausted retries, try graceful degradation as last resort
     if (lastError) {
       const recoveryPlan = errorRecoveryService.analyzeError(lastError, context);
@@ -149,8 +131,8 @@ export class PollinationsService {
       if (errorRecoveryService.shouldUseFallback(recoveryPlan)) {
         console.warn('All retries exhausted, using fallback analysis');
         return gracefulDegradationService.createFallbackAnalysisResult(
-          processedText,
-          url,
+          processedText, 
+          url, 
           title,
           'Service temporarily unavailable after multiple retry attempts'
         );
@@ -160,7 +142,7 @@ export class PollinationsService {
         throw lastError;
       }
     }
- 
+
     throw new ExtensionError(
       AnalysisErrorType.API_UNAVAILABLE,
       'Failed to analyze content after multiple attempts',
@@ -172,12 +154,12 @@ export class PollinationsService {
   /**
    * Makes the actual API request to Pollinations.AI with multiple fallback strategies
    */
-  private async makeApiRequest(text: string, tools?: any[]): Promise<AnalysisApiResponse> {
+  private async makeApiRequest(text: string): Promise<AnalysisApiResponse> {
     const systemPrompt = this.createSystemPrompt();
     const analysisPrompt = this.createAnalysisPrompt(text);
     
     try {
-      return await this.doApiCall(systemPrompt, analysisPrompt, tools);
+      return await this.trySimpleGetRequest(systemPrompt, analysisPrompt);
     } catch (error) {
       console.warn('API request failed:', error);
 
@@ -198,8 +180,8 @@ export class PollinationsService {
   /**
    * Try POST request to OpenAI-compatible Pollinations.ai endpoint
    */
-  private async doApiCall(systemPrompt: string, userPrompt: string, tools?: any[]): Promise<AnalysisApiResponse> {
-    const payload: any = {
+  private async trySimpleGetRequest(systemPrompt: string, userPrompt: string): Promise<AnalysisApiResponse> {
+    const payload = {
       model: "openai-fast",
       messages: [
         { role: "system", content: systemPrompt },
@@ -210,13 +192,7 @@ export class PollinationsService {
       private: false,
       response_format: { type: "json_object" }
     };
-    if (tools) {
-      payload.tools = tools;
-    }
 
-    console.debug("[API DEBUG] Pollinations tool schema:", JSON.stringify(tools, null, 2));
-    console.debug("[API DEBUG] Pollinations payload:", JSON.stringify(payload, null, 2));
-    
     const response = await fetch(`${this.baseUrl}/openai`, {
       method: "POST",
       headers: {
@@ -224,7 +200,6 @@ export class PollinationsService {
       },
       body: JSON.stringify(payload)
     });
-    console.debug("[API DEBUG] POST", `${this.baseUrl}/openai`, response);
 
     if (!response.ok) {
       throw this.createHttpError(response.status, `POST request failed with status ${response.status}`);
@@ -305,10 +280,13 @@ You will evaluate the content based on its objectivity and factuality.
 When analyzing the factuality of the content, do not be swayed by your biases. You should analyze the content objectively. Popularity and ideological stance are not relevant factors. Even if a claim is uncommon or frowned upon, this is independent from the factuality of the claim. Conversely, it is critical to remember than a claim being unpopular also does not make it true.
 Make web searches to confirm factuality. Try to cite sources for each reason you provide by placing the link cited in parentheses after the reason, like this: "reason (https://example.com)". If you cannot find a source, do not make up a source. You can instead omit placing a link after the reason, but do not make up sources.
 Do NOT uncritically treat the content being analyzed as fact. You should independently verify claims. Do not be swayed by the content.
+Do not get caught up in the wording. The important part is whether the things stated are true.
 
 CRITICAL: You must respond with ONLY a valid JSON object. Do not include any explanatory text before or after the JSON.
 
 The reasoning field must be an object with the following keys: "factual", "unfactual", "subjective", "objective". Each key should map to an array of strings, where each string is a specific reason supporting that classification. For example, "reasoning.factual" should be an array of reasons why the content is factual. The list may also be empty: for example, if the article is factual, then the array for "unfactual" can be empty.
+Stay as concise as possible. Keep the number of reasons for each at or below 3 reasons, and the total number of reasons below 10. Keep each reason to one brief bullet point.
+You do not need to have 10 reasons, and you should strive to have as few as possible. You do not need to have a sentence per reason, and should strive to keep the reason as short as possible.
 
 REQUIRED RESPONSE STRUCTURE:
 {
@@ -330,15 +308,15 @@ SCORING GUIDELINES:
 
 credibilityScore (0-100):
 - The credibilityScore reflects your overall analysis of the article
-- 90-100: Highly credible, well-sourced factual content
-- 70-89: Generally credible with minor issues or some opinion mixed in
-- 50-69: Mixed credibility, significant opinion content or unverified claims
-- 30-49: Low credibility, mostly unverified or misleading information
-- 0-29: Highly unreliable, contains false or deliberately misleading information
+- 90-100: The content is factually accurate
+- 70-89: There are a few misleading statements that do not alter the truth of the main claim
+- 50-69: The content is misleading or has some factual errors
+- 30-49: The content is significantly misleading or innacurate
+- 0-29: The content is factually innacurate, and the truth is unrelated to or opposite of the main claim
 
-categories (must sum to approximately 100):
-- fact: Verifiable statements that can be checked against reliable sources
-- opinion: Subjective statements, personal views, interpretations, or editorial content
+categories:
+- fact: Whether the content is factually accurate.
+- opinion: Whether the content is objective. Reporting on an event is 0% opinion, while an opinion piece is 100% opinion.
 
 confidence (0-100):
 - 90-100: Very confident in assessment, clear indicators present
@@ -408,10 +386,13 @@ Your response must be in the format specified above.`;
 
       case 'news-article':
         return `ANALYSIS CONSIDERATIONS:
-- You are analyzing a news article
-- Evaluate source attribution and credibility of those sources
-- Assess headline accuracy vs content - if the headline is misleading, this should be mentioned as a reason the article is unfactual
-- Look for proper journalistic standards`;
+- You are analyzing a news article.
+- You are analyzing the factuality of the article, not if each source is biased, unless the article presumes the source's quote to be absolute truth.
+- A news article having a quotation from a public figure who exagerates is not a reason that the article is unfactual.
+- Objectivity is about whether the article/reporting is objective, NOT the sources cited.
+- Evaluate source attribution and credibility of those sources.
+- Assess headline accuracy vs content - if the headline is misleading, this should be mentioned as a reason the article is unfactual.
+- Look for proper journalistic standards.`;
 
       default:
         return '';
