@@ -55,16 +55,20 @@ export class StorageManager {
    * Caches an analysis result with metadata
    */
   async cacheResult(url: string, result: AnalysisResult): Promise<void> {
+    console.log('[storage] cacheResult called:', { url, result });
     const preferences = await this.getUserPreferences();
-    
+    console.log('[storage] cacheResult preferences:', preferences);
+
     if (!preferences.cacheEnabled) {
+      console.log('[storage] cacheResult: cache disabled');
       return;
     }
 
     try {
       const cacheKey = `${this.cachePrefix}${result.contentHash}`;
       const urlKey = `${this.urlPrefix}${this.hashUrl(url)}`;
-      
+      console.log('[storage] cacheResult keys:', { cacheKey, urlKey });
+
       const cacheEntry: CacheEntry = {
         result,
         timestamp: Date.now(),
@@ -74,19 +78,21 @@ export class StorageManager {
       };
 
       // Store the cache entry
+      console.log('[storage] Setting cache entry:', cacheKey, cacheEntry);
       await browser.storage.local.set({ [cacheKey]: cacheEntry });
-      
+
       // Store URL mapping for quick lookup
+      console.log('[storage] Setting url mapping:', urlKey, cacheKey);
       await browser.storage.local.set({ [urlKey]: cacheKey });
 
       // Update cache statistics
       await this.updateCacheStats('add');
-
       // Perform cache cleanup if needed
       await this.performCacheCleanup();
 
+      console.log('[storage] cacheResult completed');
     } catch (error) {
-      console.warn('Failed to cache analysis result:', error);
+      console.warn('[storage] Failed to cache analysis result:', error);
       // Don't throw error for caching failures
     }
   }
@@ -95,53 +101,56 @@ export class StorageManager {
    * Retrieves cached analysis result by URL
    */
   async getCachedResult(url: string): Promise<AnalysisResult | null> {
+    console.log('[storage] getCachedResult called:', url);
     const preferences = await this.getUserPreferences();
-    
+    console.log('[storage] getCachedResult preferences:', preferences);
+
     if (!preferences.cacheEnabled) {
+      console.log('[storage] getCachedResult: cache disabled');
       return null;
     }
 
     try {
       const urlKey = `${this.urlPrefix}${this.hashUrl(url)}`;
       const urlMapping = await browser.storage.local.get(urlKey);
-      
+      console.log('[storage] getCachedResult urlMapping:', urlMapping);
+
       if (!urlMapping[urlKey]) {
+        console.log('[storage] getCachedResult: no url mapping');
         return null;
       }
 
       const cacheKey = urlMapping[urlKey];
       const cacheData = await browser.storage.local.get(cacheKey);
-      
+      console.log('[storage] getCachedResult cacheData:', cacheData);
+
       if (!cacheData[cacheKey]) {
-        // Clean up orphaned URL mapping
+        console.log('[storage] getCachedResult: no cache data, removing urlKey');
         await browser.storage.local.remove(urlKey);
         return null;
       }
 
       const cacheEntry: CacheEntry = cacheData[cacheKey];
-      
-      // Check if cache is still valid
       const cacheAge = Date.now() - cacheEntry.timestamp;
       const maxAge = preferences.cacheExpiryHours * 60 * 60 * 1000;
-      
+      console.log('[storage] getCachedResult cacheEntry:', cacheEntry, 'cacheAge:', cacheAge, 'maxAge:', maxAge);
+
       if (cacheAge > maxAge) {
-        // Clean up expired cache
+        console.log('[storage] getCachedResult: cache expired, removing');
         await this.removeCacheEntry(cacheKey, urlKey);
         return null;
       }
 
-      // Update access statistics
       cacheEntry.accessCount++;
       cacheEntry.lastAccessed = Date.now();
       await browser.storage.local.set({ [cacheKey]: cacheEntry });
 
-      // Update cache statistics
       await this.updateCacheStats('hit');
-
+      console.log('[storage] getCachedResult returning result');
       return cacheEntry.result;
 
     } catch (error) {
-      console.warn('Failed to retrieve cached result:', error);
+      console.warn('[storage] Failed to retrieve cached result:', error);
       return null;
     }
   }
