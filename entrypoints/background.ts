@@ -233,11 +233,6 @@ class BackgroundService {
       // Cache the result
       await this.cacheResult(data.url, analysisResult);
 
-      // Notify popup with analysis result
-      if (browser && browser.runtime && browser.runtime.sendMessage) {
-        browser.runtime.sendMessage({ action: 'analysis-result', data: analysisResult });
-      }
-
       return analysisResult;
 
     } catch (error) {
@@ -407,7 +402,6 @@ class BackgroundService {
     try {
       const analysisPromise = (async function analyzeArticle({ content, title, url, last_edited }: { content: string; title: string; url: string; last_edited: Date | string }): Promise<import('../types/index.js').AnalysisResult> {
         const payload = { content, title, url, last_edited };
-        console.log('Sending analysis request:', payload);
         const response = await fetch("https://api.falsefact.tranquil.hackclub.app/analyze/article", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -416,9 +410,7 @@ class BackgroundService {
         if (!response.ok) {
           throw new Error(`API request failed with status ${response.status}`);
         }
-        const result = await response.json();
-        console.log('Received analysis response:', result);
-        return result;
+        return await response.json();
       })({
         content: content.content,
         title: content.title,

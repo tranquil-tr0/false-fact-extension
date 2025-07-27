@@ -1,22 +1,3 @@
-let analysisCompleted = false;
-let timeoutTimer: number | null = null;
-
-// Listen for analysis result messages from background
-if (browser && browser.runtime && browser.runtime.onMessage) {
-  browser.runtime.onMessage.addListener((message: any) => {
-    if (message.action === 'analysis-result' && message.data) {
-      console.log('[popup] Received analysis-result message:', message.data);
-      analysisCompleted = true;
-      if (timeoutTimer) {
-        clearTimeout(timeoutTimer);
-        timeoutTimer = null;
-      }
-      showResults(message.data);
-      updateStatus('Analysis result received');
-      updateUIState('complete');
-    }
-  });
-}
 import './style.css';
 import type { AnalysisResult } from '../../types/index.js';
 import { 
@@ -90,8 +71,7 @@ async function initializePopup() {
     } catch (e) {
       // Ignore errors, fallback to default
     }
-    let currentTabUrl = '';
-    pageUrl.textContent = currentTabUrl ? truncateUrl(currentTabUrl) : 'Ready to analyze';
+    pageUrl.textContent = 'Ready to analyze';
     updateStatus('Ready to analyze content');
     analyzeBtn.disabled = false;
     buttonText.textContent = 'Analyze Content';
@@ -112,11 +92,10 @@ async function initializePopup() {
       analyzeSection.insertBefore(highlightedBtn, analyzeBtn.nextSibling);
 
       highlightedBtn.addEventListener('click', async () => {
-        console.log('[popup] Highlighted Analyze button clicked');
+        // Only analyze selected text
         updateUIState('extracting');
         try {
           const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-          console.log('[popup] Active tab:', tab);
           if (!tab.id) {
             showError('No Active Tab', 'Please navigate to a webpage to analyze content.', 'no_tab');
             return;
@@ -125,9 +104,11 @@ async function initializePopup() {
           if (pageUrl) {
             pageUrl.textContent = truncateUrl(state.currentUrl);
           }
+          // Show initial progress animation
           if (progressBar) {
             progressBar.classList.add('indeterminate');
           }
+          // Use selectedText for extraction
           if (!selectedText) {
             showError(
               'No Highlighted Text',
@@ -136,17 +117,13 @@ async function initializePopup() {
             );
             return;
           }
+          // Update UI to analyzing state
           updateUIState('analyzing');
           if (progressBar) {
             progressBar.classList.remove('indeterminate');
           }
           updateProgress(60, 'Analyzing highlighted text for credibility...');
-          console.log('[popup] Sending analyze-content message:', {
-            content: selectedText,
-            url: state.currentUrl,
-            title: document.title,
-            contentType: 'selection'
-          });
+          // Send to background script for analysis
           const analysisResult = await browser.runtime.sendMessage({
             action: 'analyze-content',
             tabId: tab.id,
@@ -157,22 +134,18 @@ async function initializePopup() {
               contentType: 'selection'
             }
           });
-          console.log('[popup] Received analysisResult:', analysisResult);
           if (analysisResult.success) {
             updateProgress(100, 'Analysis complete');
             showSuccessFeedback('Analysis complete');
-            console.log('[popup] Showing results:', analysisResult.data);
             showResults(analysisResult.data);
           } else {
             const error = analysisResult.error;
             const errorType = error?.type || 'analysis_failed';
             const errorMessage = error?.message || 'Analysis failed. Please try again.';
             const suggestedAction = error?.suggestedAction;
-            console.error('[popup] Analysis error:', errorType, errorMessage, suggestedAction);
             handleAnalysisError(errorType, errorMessage, suggestedAction, error?.retryable);
           }
         } catch (error) {
-          console.error('[popup] Unexpected analysis error:', error);
           showError(
             'Analysis Error',
             'An unexpected error occurred during analysis. Please try again.',
@@ -181,35 +154,10 @@ async function initializePopup() {
         }
       });
     }
-    // Check for cached results and update UI if found
-    if (currentTabUrl && isAnalyzableUrl(currentTabUrl)) {
-      await checkForCachedResults(currentTabUrl);
-    }
   } catch (error) {
     console.error('Failed to initialize popup:', error);
     showError('Initialization Error', 'Failed to initialize the extension. Please try again.', 'init_error');
   }
-// Listen for browser.storage changes to update analysis results in popup
-if (browser && browser.storage && browser.storage.onChanged) {
-  browser.storage.onChanged.addListener(
-    (changes: { [key: string]: any }, areaName: string) => {
-      console.log('[popup] Storage onChanged event:', changes, areaName);
-      if (areaName === 'local') {
-        for (const key in changes) {
-          if (key.startsWith('analysis_')) {
-            const updatedResult = changes[key].newValue?.result;
-            console.log('[popup] Detected analysis_ storage change:', key, updatedResult);
-            if (updatedResult) {
-              showResults(updatedResult);
-              updateStatus('Analysis result updated');
-              updateUIState('complete');
-            }
-          }
-        }
-      }
-    }
-  );
-}
 }
 
 // Check for cached analysis results
@@ -221,10 +169,9 @@ async function checkForCachedResults(url: string) {
     });
 
     if (response.success && response.data) {
-      // Show results immediately if cached result is found
+      state.analysisResult = response.data;
       showResults(response.data);
-      updateStatus('Showing cached analysis result');
-      updateUIState('complete');
+      updateStatus('Showing cached results');
     }
   } catch (error) {
     console.warn('Failed to check cached results:', error);
@@ -801,6 +748,7 @@ function handleShareResults() {
 
 // Progress tracking variables
 let progressTimer: number | null = null;
+let timeoutTimer: number | null = null;
 const SHORT_TIMEOUT = 30000; // 30 seconds
 const LONG_TIMEOUT = 60000; // 60 seconds
 
