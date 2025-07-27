@@ -39,6 +39,7 @@ export interface ContentExtractionResult {
   url: string;
   extractionMethod: 'readability' | 'selection';
   timestamp: number;
+  last_edited: string;
 }
 
 export interface IconState {

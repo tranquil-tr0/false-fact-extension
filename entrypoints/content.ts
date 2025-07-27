@@ -99,7 +99,8 @@ async function extractArticleText(): Promise<ContentExtractionResult> {
     content,
     url: currentUrl,
     extractionMethod: 'readability',
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    last_edited: new Date(document.lastModified).toISOString()
   };
 
   // Create extended content for validation
@@ -155,7 +156,8 @@ async function extractSelectedText(): Promise<ContentExtractionResult> {
     content,
     url: currentUrl,
     extractionMethod: 'selection',
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    last_edited: new Date(document.lastModified).toISOString()
   };
 
   // Create extended content for validation

@@ -9,15 +9,8 @@ import {
   createAnalysisError,
   type AnalysisError
 } from '../types/index.js';
-import { pollinationsService } from '../services/pollinations.js';
 import { storageManager, type UserPreferences } from '../services/storage.js';
 import { iconManager } from '../services/icon-manager.js';
-import { 
-  errorRecoveryService, 
-  gracefulDegradationService,
-  RecoveryStrategy,
-  ErrorSeverity 
-} from '../utils/error-recovery.js';
 
 /**
  * Analysis workflow state management
@@ -58,98 +51,98 @@ class BackgroundService {
         case 'analyze-content':
           this.handleAnalyzeContent(message.data, tabId)
             .then(result => sendResponse({ success: true, data: result }))
-            .catch(error => sendResponse({ 
-              success: false, 
-              error: this.formatError(error) 
+            .catch(error => sendResponse({
+              success: false,
+              error: this.formatError(error)
             }));
           return true; // Keep message channel open for async response
 
         case 'start-analysis':
           this.handleStartAnalysis(message.data, tabId)
             .then(result => sendResponse({ success: true, data: result }))
-            .catch(error => sendResponse({ 
-              success: false, 
-              error: this.formatError(error) 
+            .catch(error => sendResponse({
+              success: false,
+              error: this.formatError(error)
             }));
           return true; // Keep message channel open for async response
 
         case 'get-analysis-status':
           const workflow = this.getWorkflowForTab(tabId);
-          sendResponse({ 
-            success: true, 
-            data: this.getWorkflowStatus(workflow) 
+          sendResponse({
+            success: true,
+            data: this.getWorkflowStatus(workflow)
           });
           return true;
 
         case 'cancel-analysis':
           this.handleCancelAnalysis(tabId)
             .then(() => sendResponse({ success: true }))
-            .catch(error => sendResponse({ 
-              success: false, 
-              error: this.formatError(error) 
+            .catch(error => sendResponse({
+              success: false,
+              error: this.formatError(error)
             }));
           return true;
 
         case 'retry-analysis':
           this.handleRetryAnalysis(sender.tab?.id ?? message.tabId)
             .then(result => sendResponse({ success: true, data: result }))
-            .catch(error => sendResponse({ 
-              success: false, 
-              error: this.formatError(error) 
+            .catch(error => sendResponse({
+              success: false,
+              error: this.formatError(error)
             }));
           return true;
 
         case 'get-cached-result':
           this.handleGetCachedResult(message.url)
             .then(result => sendResponse({ success: true, data: result }))
-            .catch(error => sendResponse({ 
-              success: false, 
-              error: this.formatError(error) 
+            .catch(error => sendResponse({
+              success: false,
+              error: this.formatError(error)
             }));
           return true;
 
         case 'get-user-preferences':
           this.handleGetUserPreferences()
             .then(prefs => sendResponse({ success: true, data: prefs }))
-            .catch(error => sendResponse({ 
-              success: false, 
-              error: this.formatError(error) 
+            .catch(error => sendResponse({
+              success: false,
+              error: this.formatError(error)
             }));
           return true;
 
         case 'set-user-preferences':
           this.handleSetUserPreferences(message.preferences)
             .then(() => sendResponse({ success: true }))
-            .catch(error => sendResponse({ 
-              success: false, 
-              error: this.formatError(error) 
+            .catch(error => sendResponse({
+              success: false,
+              error: this.formatError(error)
             }));
           return true;
 
         case 'get-cache-stats':
           this.handleGetCacheStats()
             .then(stats => sendResponse({ success: true, data: stats }))
-            .catch(error => sendResponse({ 
-              success: false, 
-              error: this.formatError(error) 
+            .catch(error => sendResponse({
+              success: false,
+              error: this.formatError(error)
             }));
           return true;
 
         case 'clear-cache':
           this.handleClearCache()
             .then(() => sendResponse({ success: true }))
-            .catch(error => sendResponse({ 
-              success: false, 
-              error: this.formatError(error) 
+            .catch(error => sendResponse({
+              success: false,
+              error: this.formatError(error)
             }));
           return true;
 
         case 'get-storage-usage':
           this.handleGetStorageUsage()
             .then(usage => sendResponse({ success: true, data: usage }))
-            .catch(error => sendResponse({ 
-              success: false, 
-              error: this.formatError(error) 
+            .catch(error => sendResponse({
+              success: false,
+              error: this.formatError(error)
             }));
           return true;
 
@@ -219,18 +212,19 @@ class BackgroundService {
     iconManager.setAnalyzingState(tabId);
 
     try {
-    // Create content extraction result from provided data
-    const extractedContent: ContentExtractionResult = {
-      title: data.title,
-      content: data.content,
-      url: data.url,
-      extractionMethod: data.extractionMethod,
-      timestamp: Date.now()
-    };
+      // Create content extraction result from provided data
+      const extractedContent: ContentExtractionResult = {
+        title: data.title,
+        content: data.content,
+        url: data.url,
+        extractionMethod: data.extractionMethod,
+        timestamp: Date.now(),
+        last_edited: (data as any).last_edited ?? new Date().toISOString()
+      };
 
       // Perform analysis
       const analysisResult = await this.performAnalysis(extractedContent, workflow);
-      
+
       // Update workflow with result
       workflow.status = 'complete';
       workflow.result = analysisResult;
@@ -307,14 +301,14 @@ class BackgroundService {
     try {
       // Extract content from the page
       const extractedContent = await this.extractContent(tabId, data.extractionMethod);
-      
+
       // Update workflow status
       workflow.status = 'analyzing';
       iconManager.setAnalyzingState(tabId);
 
       // Perform analysis
       const analysisResult = await this.performAnalysis(extractedContent, workflow);
-      
+
       // Update workflow with result
       workflow.status = 'complete';
       workflow.result = analysisResult;
@@ -344,16 +338,16 @@ class BackgroundService {
     method: 'readability' | 'selection'
   ): Promise<ContentExtractionResult> {
     const action = method === 'readability' ? 'extract-article-text' : 'extract-selected-text';
-    
+
     try {
       const response = await browser.tabs.sendMessage(tabId, { action });
-      
+
       if (response.error) {
         throw new ExtensionError(
           AnalysisErrorType.EXTRACTION_FAILED,
           response.error,
           true,
-          method === 'selection' 
+          method === 'selection'
             ? 'Please select text on the page and try again'
             : 'Please try selecting text manually instead'
         );
@@ -386,20 +380,14 @@ class BackgroundService {
   }
 
   /**
-   * Performs analysis using the Pollinations service with enhanced error recovery
+   * Performs analysis using the api
    */
   private async performAnalysis(
     content: ContentExtractionResult,
     workflow: AnalysisWorkflow
   ): Promise<AnalysisResult> {
-    const context = {
-      contentLength: content.content.length,
-      url: content.url,
-      operation: 'perform-analysis',
-      workflowId: workflow.id,
-      tabId: workflow.tabId
-    };
-
+    // Use last_edited if available, otherwise fallback to timestamp
+    const last_edited = content.last_edited || new Date(content.timestamp).toISOString();
     // Set up timeout for analysis
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
@@ -411,63 +399,26 @@ class BackgroundService {
         ));
       }, this.analysisTimeout);
     });
-
     try {
-      const analysisPromise = pollinationsService.analyzeText(
-        content.content,
-        content.url,
-        content.title
-      );
-
-      const result = await Promise.race([analysisPromise, timeoutPromise]);
-      
-      // Clear any retry history on success
-      errorRecoveryService.clearRetryHistory(new Error('analysis-success'), context);
-      
-      return result;
-
-    } catch (error) {
-      // Record the error attempt
-      errorRecoveryService.recordRetryAttempt(error, context);
-      
-      // Analyze error and get recovery plan
-      const recoveryPlan = errorRecoveryService.analyzeError(error, context);
-      
-      console.warn('Analysis failed in background service:', {
-        error: error instanceof Error ? error.message : String(error),
-        recoveryPlan: {
-          severity: recoveryPlan.severity,
-          strategy: recoveryPlan.strategy,
-          retryable: recoveryPlan.retryable
-        },
-        workflowId: workflow.id
-      });
-
-      // Update workflow retry count
-      if (error instanceof ExtensionError && error.retryable) {
-        workflow.retryCount++;
-      }
-
-      // Handle critical errors that should trigger fallback
-      if (recoveryPlan.severity === ErrorSeverity.HIGH || 
-          recoveryPlan.strategy === RecoveryStrategy.FALLBACK) {
-        
-        console.warn('Attempting graceful degradation due to critical error');
-        
-        try {
-          return gracefulDegradationService.createFallbackAnalysisResult(
-            content.content,
-            content.url,
-            content.title,
-            `Analysis service error: ${error instanceof Error ? error.message : 'Unknown error'}`
-          );
-        } catch (fallbackError) {
-          console.error('Fallback analysis also failed:', fallbackError);
-          // If even fallback fails, throw the original error
-          throw error;
+      const analysisPromise = (async function analyzeArticle({ content, title, url, last_edited }: { content: string; title: string; url: string; last_edited: Date | string }): Promise<import('../types/index.js').AnalysisResult> {
+        const payload = { content, title, url, last_edited };
+        const response = await fetch("https://api.falsefact.tranquil.hackclub.app/analyze/article", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
         }
-      }
-
+        return await response.json();
+      })({
+        content: content.content,
+        title: content.title,
+        url: content.url,
+        last_edited
+      });
+      return await Promise.race([analysisPromise, timeoutPromise]);
+    } catch (error) {
       throw error;
     }
   }
