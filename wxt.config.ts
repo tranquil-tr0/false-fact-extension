@@ -2,6 +2,6 @@ import { defineConfig } from 'wxt';
 
 export default defineConfig({
   manifest: {
-    permissions: ['tabs', 'scripting', 'activeTab', 'storage'],
+    permissions: ['scripting', 'activeTab', 'storage'],
   },
 });
