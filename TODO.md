@@ -5,3 +5,4 @@ add server caching future
 add social media future
 better method of extracting date future
 extract publisher future
+mark text selection as article future
