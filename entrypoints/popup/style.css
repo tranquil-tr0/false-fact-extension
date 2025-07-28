@@ -1,5 +1,6 @@
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -27,7 +28,7 @@
   --bg-tertiary: #3d3d3d;
   --border-color: rgba(255, 255, 255, 0.15); /* Increased contrast */
   --border-hover: rgba(255, 255, 255, 0.25); /* Increased contrast */
-  
+
   /* Focus styles for keyboard navigation */
   --focus-outline-color: #ffffff;
   --focus-outline-width: 2px;
@@ -152,8 +153,12 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Cancel Button */
@@ -188,8 +193,14 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Progress Bar */
@@ -211,7 +222,7 @@ body {
 }
 
 .progress-fill::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -229,18 +240,29 @@ body {
 /* Indeterminate progress animation for initial loading */
 .progress-bar.indeterminate .progress-fill {
   width: 50% !important;
-  animation: indeterminateProgress 1.5s infinite cubic-bezier(0.65, 0.05, 0.36, 1);
+  animation: indeterminateProgress 1.5s infinite
+    cubic-bezier(0.65, 0.05, 0.36, 1);
 }
 
 @keyframes indeterminateProgress {
-  0% { transform: translateX(-100%); }
-  60% { transform: translateX(100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  60% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 /* Progress Text and Time */
@@ -258,16 +280,22 @@ body {
 }
 
 @keyframes textPulse {
-  0% { opacity: 0.7; }
-  50% { opacity: 1; }
-  100% { opacity: 0.7; }
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.7;
+  }
 }
 
 .progress-time {
   font-size: 11px;
   color: var(--text-muted);
   text-align: right;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
   transition: color 0.3s ease;
 }
 
@@ -292,7 +320,7 @@ body {
 }
 
 .progress-stage::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 50%;
@@ -320,15 +348,15 @@ body {
 }
 
 @keyframes successPulse {
-  0% { 
+  0% {
     transform: scale(1);
     opacity: 1;
   }
-  50% { 
+  50% {
     transform: scale(1.05);
     opacity: 0.8;
   }
-  100% { 
+  100% {
     transform: scale(1);
     opacity: 1;
   }
@@ -418,8 +446,14 @@ body {
 
 /* Results animation */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Highlight animation for result sections */
@@ -428,9 +462,15 @@ body {
 }
 
 @keyframes highlightPulse {
-  0% { background-color: transparent; }
-  30% { background-color: rgba(79, 70, 229, 0.1); }
-  100% { background-color: transparent; }
+  0% {
+    background-color: transparent;
+  }
+  30% {
+    background-color: rgba(79, 70, 229, 0.1);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 
 /* Results Section */
@@ -490,7 +530,8 @@ body {
   gap: 8px;
 }
 
-.retry-button, .help-button {
+.retry-button,
+.help-button {
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 500;
@@ -681,7 +722,7 @@ body {
 }
 
 .reasoning-subheader.expandable::after {
-  content: '▼';
+  content: "▼";
   font-size: 10px;
   margin-left: 6px;
   transition: transform 0.2s ease;
@@ -755,7 +796,7 @@ body {
   :root {
     color: #1f2937;
     background-color: #ffffff;
-    
+
     --text-primary: #1f2937;
     --text-secondary: #6b7280;
     --text-muted: #9ca3af;
@@ -771,7 +812,6 @@ body {
     border-color: rgba(239, 68, 68, 0.2);
   }
 }
-
 
 /* Focus styles for keyboard navigation */
 button:focus-visible,
@@ -811,9 +851,9 @@ a:focus-visible,
     --border-color: CanvasText;
     --border-hover: Highlight;
   }
-  
+
   /* Ensure all interactive elements have visible borders */
-  button, 
+  button,
   .analyze-button,
   .cancel-button,
   .retry-button,
@@ -821,37 +861,57 @@ a:focus-visible,
   .action-button {
     border: 1px solid CanvasText;
   }
-  
+
   /* Ensure progress bars are visible */
   .progress-bar {
     border: 1px solid CanvasText;
   }
-  
+
   .progress-fill {
     background-color: Highlight;
   }
-  
+
   /* Ensure category bars are distinguishable */
   .category-fill.fact {
     background-color: Highlight;
-    background-image: linear-gradient(45deg, Highlight 25%, transparent 25%, transparent 50%, Highlight 50%, Highlight 75%, transparent 75%, transparent);
+    background-image: linear-gradient(
+      45deg,
+      Highlight 25%,
+      transparent 25%,
+      transparent 50%,
+      Highlight 50%,
+      Highlight 75%,
+      transparent 75%,
+      transparent
+    );
     background-size: 10px 10px;
   }
-  
+
   .category-fill.opinion {
     background-color: Highlight;
     background-image: linear-gradient(90deg, Highlight 50%, transparent 50%);
     background-size: 10px 10px;
   }
-  
+
   .category-fill.false {
     background-color: Highlight;
-    background-image: linear-gradient(135deg, Highlight 25%, transparent 25%, transparent 50%, Highlight 50%, Highlight 75%, transparent 75%, transparent);
+    background-image: linear-gradient(
+      135deg,
+      Highlight 25%,
+      transparent 25%,
+      transparent 50%,
+      Highlight 50%,
+      Highlight 75%,
+      transparent 75%,
+      transparent
+    );
     background-size: 10px 10px;
   }
-  
+
   /* Ensure text remains readable */
-  .text-primary, .text-secondary, .text-muted {
+  .text-primary,
+  .text-secondary,
+  .text-muted {
     color: CanvasText;
   }
 }
@@ -866,11 +926,11 @@ a:focus-visible,
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
-  
+
   .progress-fill::after {
     animation: none !important;
   }
-  
+
   .progress-bar.indeterminate .progress-fill {
     animation: none !important;
     width: 50% !important;
@@ -882,7 +942,7 @@ a:focus-visible,
   body {
     line-height: 1.7;
   }
-  
+
   .analyze-button,
   .cancel-button,
   .retry-button,
@@ -890,8 +950,60 @@ a:focus-visible,
   .action-button {
     padding: 12px 24px;
   }
-  
+
   .category-bar {
     height: 12px;
+  }
+}
+
+/* Toast Notification Animation */
+#toast-notification {
+  position: fixed;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 2px 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+  font-size: 14px;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+#toast-notification.slide-in-bottom {
+  animation: slideInBottom 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#toast-notification.slide-out-bottom {
+  animation: slideOutBottom 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes slideInBottom {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes slideOutBottom {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(40px);
   }
 }

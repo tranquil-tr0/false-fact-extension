@@ -5,6 +5,7 @@ import {
   showKeyboardShortcutsHelp,
   createSkipLink,
   enhanceForHighContrast,
+  announceMessage,
   type KeyboardShortcut,
 } from "../../utils/accessibility.js";
 import { generateContentHash } from "../../utils/content.js";
@@ -421,9 +422,36 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
   }
 }
 
-// Update status message
+/**
+ * Show a toast notification with the given message.
+ */
 function updateStatus(message: string) {
-  // Status message element removed; no action needed.
+  const toast = document.getElementById("toast-notification");
+  if (!toast) return;
+  toast.textContent = message;
+  toast.removeAttribute("hidden");
+
+  // Remove any previous timeout and animation classes
+  if ((toast as any)._toastTimeout) {
+    clearTimeout((toast as any)._toastTimeout);
+  }
+  toast.classList.remove("slide-out-bottom");
+  // Force reflow to restart animation if needed
+  void (toast as HTMLElement).offsetWidth;
+  toast.classList.add("slide-in-bottom");
+
+  announceMessage(message);
+
+  (toast as any)._toastTimeout = setTimeout(() => {
+    toast.classList.remove("slide-in-bottom");
+    toast.classList.add("slide-out-bottom");
+    (toast as any)._toastTimeout = null;
+    // Hide after animation
+    setTimeout(() => {
+      toast.setAttribute("hidden", "");
+      toast.classList.remove("slide-out-bottom");
+    }, 250);
+  }, 2000);
 }
 
 // Show error state
@@ -1464,8 +1492,6 @@ function initializeAccessibility() {
 
   // Check for high contrast mode
   enhanceForHighContrast();
-
-  // Screen reader announcer is now defined in HTML.
 }
 
 // Event listeners

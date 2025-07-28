@@ -3,6 +3,24 @@
  */
 
 /**
+ * Announce a message to screen readers using the #screen-reader-announcer div.
+ * @param message The message to announce
+ * @param politeness The politeness level: "polite" (default) or "assertive"
+ */
+export function announceMessage(
+  message: string,
+  politeness: "polite" | "assertive" = "polite"
+): void {
+  const announcer = document.getElementById("screen-reader-announcer");
+  if (!announcer) return;
+  announcer.setAttribute("aria-live", politeness);
+  announcer.textContent = "";
+  setTimeout(() => {
+    announcer.textContent = message;
+  }, 10);
+}
+
+/**
  * Keyboard shortcut definitions
  */
 export interface KeyboardShortcut {
