@@ -1,13 +1,14 @@
 import './style.css';
 import type { AnalysisResult } from '../../types/index.js';
-import { 
-  registerKeyboardShortcuts, 
-  announceToScreenReader, 
+import {
+  registerKeyboardShortcuts,
+  announceToScreenReader,
   showKeyboardShortcutsHelp,
   createSkipLink,
   enhanceForHighContrast,
   type KeyboardShortcut
 } from '../../utils/accessibility.js';
+import { generateContentHash } from '../../utils/content.js';
 
 // Ensure browser API is available
 declare const browser: any;
@@ -117,6 +118,22 @@ async function initializePopup() {
             );
             return;
           }
+
+          // --- Caching logic for highlighted text ---
+          const highlightedHash = generateContentHash(selectedText);
+          const cached = await browser.storage.local.get(`analysis_${highlightedHash}`);
+          if (cached && cached[`analysis_${highlightedHash}`]) {
+            updateUIState('analyzing');
+            if (progressBar) {
+              progressBar.classList.remove('indeterminate');
+            }
+            updateProgress(100, 'Loaded cached analysis');
+            showSuccessFeedback('Loaded cached analysis');
+            showResults(cached[`analysis_${highlightedHash}`]);
+            return;
+          }
+          // --- End caching logic ---
+
           // Update UI to analyzing state
           updateUIState('analyzing');
           if (progressBar) {
@@ -138,6 +155,8 @@ async function initializePopup() {
             updateProgress(100, 'Analysis complete');
             showSuccessFeedback('Analysis complete');
             showResults(analysisResult.data);
+            // Cache result
+            await browser.storage.local.set({ [`analysis_${highlightedHash}`]: analysisResult.data });
           } else {
             const error = analysisResult.error;
             const errorType = error?.type || 'analysis_failed';
@@ -518,6 +537,21 @@ async function handleAnalyzeClick() {
       return;
     }
 
+    // --- Caching logic for extracted content ---
+    const contentHash = generateContentHash(extractionResult.content);
+    const cached = await browser.storage.local.get(`analysis_${contentHash}`);
+    if (cached && cached[`analysis_${contentHash}`]) {
+      updateUIState('analyzing');
+      if (progressBar) {
+        progressBar.classList.remove('indeterminate');
+      }
+      updateProgress(100, 'Loaded cached analysis');
+      showSuccessFeedback('Loaded cached analysis');
+      showResults(cached[`analysis_${contentHash}`]);
+      return;
+    }
+    // --- End caching logic ---
+
     // Update UI to analyzing state with smooth transition
     updateUIState('analyzing');
     
@@ -562,6 +596,8 @@ async function handleAnalyzeClick() {
         
         // Show results with highlight animation
         showResults(analysisResult.data);
+        // Cache result
+        await browser.storage.local.set({ [`analysis_${contentHash}`]: analysisResult.data });
       } else {
         const error = analysisResult.error;
         const errorType = error?.type || 'analysis_failed';
