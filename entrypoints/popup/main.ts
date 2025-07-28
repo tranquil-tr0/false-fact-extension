@@ -620,7 +620,7 @@ function formatReasoning(
         .filter((n: string) => n.length > 0)
         .map(
           (num: string) =>
-            `<button class="source-link-btn" data-source="${num}" aria-label="Open source ${num}">[${num}]</button>`
+            `<button class="source-link-btn" data-source="${num}" aria-label="Open source ${num}">${num}</button>`
         )
         .join("");
       return buttons;

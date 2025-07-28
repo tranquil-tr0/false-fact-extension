@@ -1007,3 +1007,29 @@ a:focus-visible,
     transform: translateX(-50%) translateY(40px);
   }
 }
+
+/* Inline Source Link Button */
+.source-link-btn {
+  display: inline;
+  padding: 0px 2px;
+  min-width: 12px;
+  font-size: 0.85em;
+  color: var(--primary-color);
+  background: none;
+  border: 1px solid var(--primary-color);
+  border-radius: 5px;
+  cursor: pointer;
+  vertical-align: baseline;
+  line-height: inherit -1;
+  font-weight: inherit;
+  transition: color 0.15s, border-color 0.15s;
+  margin: 0 2px;
+}
+
+.source-link-btn:hover,
+.source-link-btn:focus {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-hover);
+  outline: none;
+}
