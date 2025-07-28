@@ -75,6 +75,30 @@ async function initializePopup() {
       const { analysisResult, contentHash } =
         cachedReadability[`readability_cache_${currentUrl}`];
       showResults(analysisResult);
+      // Show "Analyze Highlighted Text" button if there is highlighted text
+      if (dom.highlightedBtn) {
+        let hasSelection = false;
+        let selectedText = "";
+        try {
+          const [tab] = await browser.tabs.query({
+            active: true,
+            currentWindow: true,
+          });
+          if (tab.id) {
+            const selectionResult = await browser.tabs.sendMessage(tab.id, {
+              action: "get-selected-text",
+            });
+            selectedText =
+              selectionResult && selectionResult.text
+                ? selectionResult.text.trim()
+                : "";
+            hasSelection = !!selectedText;
+          }
+        } catch (e) {
+          // Ignore errors, fallback to default
+        }
+        dom.highlightedBtn.style.display = hasSelection ? "" : "none";
+      }
       if (dom.pageUrl) {
         dom.pageUrl.textContent = truncateUrl(state.currentUrl);
       }
