@@ -72,16 +72,43 @@ async function initializePopup() {
     const currentUrl = tab?.url || "";
     state.currentUrl = currentUrl;
 
+    // Check for selected text in the active tab
+    let hasSelection = false;
+    let selectedText = "";
+    try {
+      const [tab] = await browser.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      if (tab.id) {
+        const selectionResult = await browser.tabs.sendMessage(tab.id, {
+          action: "get-selected-text",
+        });
+        selectedText =
+          selectionResult && selectionResult.text
+            ? selectionResult.text.trim()
+            : "";
+        hasSelection = !!selectedText;
+      }
+    } catch (e) {
+      // Ignore errors, fallback to default
+    }
+    if (dom.pageUrl) dom.pageUrl.textContent = "Ready to analyze";
+    if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
+    if (dom.buttonText) dom.buttonText.textContent = "Analyze Content";
+
+    if (dom.highlightedBtn) {
+      dom.highlightedBtn.style.display = hasSelection ? "" : "none";
+      dom.highlightedBtn.onclick = () => analyzeHighlightedText(selectedText);
+    }
+
     // Check for cached readability analysis by URL
-    const cachedReadability = await browser.storage.local.get(
-      `readability_cache_${currentUrl}`
+    const cachedArticle = await browser.storage.local.get(
+      `article_cache_${currentUrl}`
     );
-    if (
-      cachedReadability &&
-      cachedReadability[`readability_cache_${currentUrl}`]
-    ) {
+    if (cachedArticle && cachedArticle[`article_cache_${currentUrl}`]) {
       const { analysisResult, contentHash } =
-        cachedReadability[`readability_cache_${currentUrl}`];
+        cachedArticle[`article_cache_${currentUrl}`];
       showResults(analysisResult);
       if (dom.pageUrl) {
         dom.pageUrl.textContent = truncateUrl(state.currentUrl);
@@ -136,39 +163,6 @@ async function initializePopup() {
         }
       };
     }
-
-    // Check for selected text in the active tab
-    let hasSelection = false;
-    let selectedText = "";
-    try {
-      const [tab] = await browser.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
-      if (tab.id) {
-        const selectionResult = await browser.tabs.sendMessage(tab.id, {
-          action: "get-selected-text",
-        });
-        selectedText =
-          selectionResult && selectionResult.text
-            ? selectionResult.text.trim()
-            : "";
-        hasSelection = !!selectedText;
-      }
-    } catch (e) {
-      // Ignore errors, fallback to default
-    }
-    if (dom.pageUrl) dom.pageUrl.textContent = "Ready to analyze";
-    if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
-    if (dom.buttonText) dom.buttonText.textContent = "Analyze Content";
-
-    if (dom.highlightedBtn) {
-      dom.highlightedBtn.style.display = hasSelection ? "" : "none";
-      dom.highlightedBtn.onclick = () => analyzeHighlightedText(selectedText);
-    }
-
-    // gap between the highted text button and the results panel (in analysis section)
-    adjustPopupMainGap();
   } catch (error) {
     console.error("Failed to initialize popup:", error);
     showError(
@@ -188,6 +182,7 @@ function adjustPopupMainGap() {
   ) as HTMLElement | null;
   const popupMain = document.querySelector(".popup-main") as HTMLElement | null;
   if (analyzeSection && popupMain) {
+    console.log(analyzeSection.offsetHeight, analyzeSection.clientHeight);
     if (analyzeSection.offsetHeight === 0) {
       popupMain.style.gap = "0px";
     } else {
@@ -235,17 +230,20 @@ async function analyzeHighlightedText(selectedText: string) {
 
     // --- Caching logic for highlighted text ---
     const highlightedHash = generateContentHash(selectedText);
-    const cached = await browser.storage.local.get(
-      `analysis_${highlightedHash}`
+    const cachedSelection = await browser.storage.local.get(
+      `selection_cache_${highlightedHash}`
     );
-    if (cached && cached[`analysis_${highlightedHash}`]) {
+    if (
+      cachedSelection &&
+      cachedSelection[`selection_cache_${highlightedHash}`]
+    ) {
       updateUIState("analyzing");
       if (dom.progressBar) {
         dom.progressBar.classList.remove("indeterminate");
       }
       updateProgress(100, "Loaded cached analysis");
       sendToast("Loaded cached analysis");
-      showResults(cached[`analysis_${highlightedHash}`]);
+      showResults(cachedSelection[`selection_cache_${highlightedHash}`]);
       return;
     }
     // --- End caching logic ---
@@ -273,7 +271,7 @@ async function analyzeHighlightedText(selectedText: string) {
       showResults(analysisResult.data);
       // Cache result
       await browser.storage.local.set({
-        [`analysis_${highlightedHash}`]: analysisResult.data,
+        [`selection_cache_${highlightedHash}`]: analysisResult.data,
       });
     } else {
       const error = analysisResult.error;
@@ -386,6 +384,9 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       state.canCancel = false;
       stopProgressTimer();
       updateProgress(100, "Analysis complete");
+
+      // gap between the highted text button and the results panel (in analysis section)
+      adjustPopupMainGap();
 
       // Add entrance animation to results
       if (dom.resultsSection) {
@@ -762,20 +763,7 @@ async function handleAnalyzeClick() {
       return;
     }
 
-    // --- Caching logic for extracted content ---
     const contentHash = generateContentHash(extractionResult.content);
-    const cached = await browser.storage.local.get(`analysis_${contentHash}`);
-    if (cached && cached[`analysis_${contentHash}`]) {
-      updateUIState("analyzing");
-      if (dom.progressBar) {
-        dom.progressBar.classList.remove("indeterminate");
-      }
-      updateProgress(100, "Loaded cached analysis");
-      sendToast("Loaded cached analysis");
-      showResults(cached[`analysis_${contentHash}`]);
-      return;
-    }
-    // --- End caching logic ---
 
     // Update UI to analyzing state with smooth transition
     updateUIState("analyzing");
@@ -823,24 +811,15 @@ async function handleAnalyzeClick() {
 
         // Show results with highlight animation
         showResults(analysisResult.data);
-        // Cache result
+
+        // Article cache: key by URL, value includes contentHash and result.
         await browser.storage.local.set({
-          [`analysis_${contentHash}`]: analysisResult.data,
+          [`article_cache_${state.currentUrl}`]: {
+            url: state.currentUrl,
+            contentHash,
+            analysisResult: analysisResult.data,
+          },
         });
-        // Also cache by URL for readability (full-page) analyses
-        if (
-          (extractionResult.contentType ||
-            extractionResult.extractionMethod) === "article" ||
-          extractionResult.extractionMethod === "readability"
-        ) {
-          await browser.storage.local.set({
-            [`readability_cache_${state.currentUrl}`]: {
-              url: state.currentUrl,
-              contentHash,
-              analysisResult: analysisResult.data,
-            },
-          });
-        }
       } else {
         const error = analysisResult.error;
         const errorType = error?.type || "analysis_failed";
