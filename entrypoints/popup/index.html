@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -12,43 +12,129 @@
         <header class="popup-header" role="banner">
           <h1 class="popup-title">Fact Checker</h1>
           <div class="page-info">
-            <span id="page-url" class="page-url" aria-live="polite" aria-label="Current page URL">Loading...</span>
+            <span
+              id="page-url"
+              class="page-url"
+              aria-live="polite"
+              aria-label="Current page URL"
+              >Loading...</span
+            >
           </div>
         </header>
 
         <main class="popup-main" role="main">
           <div class="analyze-section">
-            <button id="analyze-btn" class="analyze-button" type="button" aria-label="Analyze content on current page" accesskey="a">
+            <button
+              id="analyze-btn"
+              class="analyze-button"
+              type="button"
+              aria-label="Analyze content on current page"
+              accesskey="a"
+            >
               <span class="button-text">Analyze Content</span>
             </button>
-            <button id="analyze-highlighted-btn" class="analyze-button highlighted" type="button" aria-label="Analyze highlighted text" style="display: none;">
+            <button
+              id="analyze-highlighted-btn"
+              class="analyze-button highlighted"
+              type="button"
+              aria-label="Analyze highlighted text"
+              style="display: none"
+            >
               <span class="button-text">Analyze Highlighted Text</span>
-              <div class="loading-spinner hidden" id="loading-spinner" aria-hidden="true"></div>
+              <div
+                class="loading-spinner hidden"
+                id="loading-spinner"
+                aria-hidden="true"
+              ></div>
             </button>
-            <button id="cancel-btn" class="cancel-button hidden" type="button" aria-label="Cancel analysis" accesskey="c">
+            <button
+              id="cancel-btn"
+              class="cancel-button hidden"
+              type="button"
+              aria-label="Cancel analysis"
+              accesskey="c"
+            >
               Cancel
             </button>
-            <div class="progress-container hidden" id="progress-container" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="progress-text">
+            <div
+              class="progress-container hidden"
+              id="progress-container"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+              aria-labelledby="progress-text"
+            >
               <div class="progress-bar" id="progress-bar">
                 <div class="progress-fill" id="progress-fill"></div>
               </div>
-              <div class="progress-text" id="progress-text" aria-live="polite">Initializing...</div>
-              <div class="progress-time" id="progress-time" aria-label="Elapsed time">0s</div>
-              <div class="progress-stages" id="progress-stages" role="list" aria-label="Analysis stages">
-                <div class="progress-stage" id="stage-extract" data-stage="extracting" role="listitem" aria-label="Extract stage">Extract</div>
-                <div class="progress-stage" id="stage-analyze" data-stage="analyzing" role="listitem" aria-label="Analyze stage">Analyze</div>
-                <div class="progress-stage" id="stage-complete" data-stage="complete" role="listitem" aria-label="Complete stage">Complete</div>
+              <div class="progress-text" id="progress-text" aria-live="polite">
+                Initializing...
+              </div>
+              <div
+                class="progress-time"
+                id="progress-time"
+                aria-label="Elapsed time"
+              >
+                0s
+              </div>
+              <div
+                class="progress-stages"
+                id="progress-stages"
+                role="list"
+                aria-label="Analysis stages"
+              >
+                <div
+                  class="progress-stage"
+                  id="stage-extract"
+                  data-stage="extracting"
+                  role="listitem"
+                  aria-label="Extract stage"
+                >
+                  Extract
+                </div>
+                <div
+                  class="progress-stage"
+                  id="stage-analyze"
+                  data-stage="analyzing"
+                  role="listitem"
+                  aria-label="Analyze stage"
+                >
+                  Analyze
+                </div>
+                <div
+                  class="progress-stage"
+                  id="stage-complete"
+                  data-stage="complete"
+                  role="listitem"
+                  aria-label="Complete stage"
+                >
+                  Complete
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="results-section hidden" id="results-section" aria-live="polite">
-            <div class="result-display" id="result-display" role="region" aria-label="Analysis results">
+          <div
+            class="results-section hidden"
+            id="results-section"
+            aria-live="polite"
+          >
+            <div
+              class="result-display"
+              id="result-display"
+              role="region"
+              aria-label="Analysis results"
+            >
               <!-- Results will be populated here -->
             </div>
           </div>
 
-          <div class="error-section hidden" id="error-section" aria-live="assertive">
+          <div
+            class="error-section hidden"
+            id="error-section"
+            aria-live="assertive"
+          >
             <div class="error-message" id="error-message" role="alert">
               <div class="error-icon" aria-hidden="true">⚠️</div>
               <div class="error-content">
@@ -57,16 +143,24 @@
                   Unable to analyze content. Please try again.
                 </div>
                 <div class="error-actions">
-                  <button id="retry-btn" class="retry-button" aria-label="Try analyzing again" accesskey="r">Try Again</button>
-                  <button id="help-btn" class="help-button" aria-label="Get help with this error" accesskey="h">Help</button>
+                  <button
+                    id="retry-btn"
+                    class="retry-button"
+                    aria-label="Try analyzing again"
+                    accesskey="r"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    id="help-btn"
+                    class="help-button"
+                    aria-label="Get help with this error"
+                    accesskey="h"
+                  >
+                    Help
+                  </button>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div class="status-section">
-            <div class="status-message" id="status-message" role="status" aria-live="polite">
-              Ready to analyze content
             </div>
           </div>
         </main>
@@ -75,3 +169,10 @@
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
+
+<div
+  id="screen-reader-announcer"
+  class="sr-only"
+  aria-live="polite"
+  aria-atomic="true"
+></div>
