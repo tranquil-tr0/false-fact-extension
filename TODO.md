@@ -3,3 +3,5 @@ server add endpoint for nonarticle text (selection)
 extension icon
 add server caching future
 add social media future
+better method of extracting date future
+extract publisher future
