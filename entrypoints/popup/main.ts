@@ -465,6 +465,7 @@ function showResults(analysisResult: AnalysisResult) {
   // Create results display HTML
   const resultsHTML = createResultsHTML(analysisResult);
   if (dom.resultDisplay) dom.resultDisplay.innerHTML = resultsHTML;
+  attachSourceLinkListeners(analysisResult.sources);
 
   // Update UI state to complete
   updateUIState("complete");
@@ -552,7 +553,8 @@ function createResultsHTML(result: AnalysisResult): string {
       <div class="reasoning-section">
         <div class="reasoning-header">Analysis Reasoning</div>
         <div class="reasoning-content">${formatReasoning(
-          result.reasoning
+          result.reasoning,
+          result.sources
         )}</div>
       </div>
       
@@ -593,12 +595,15 @@ function getCredibilityColor(level: string): string {
 }
 
 // Format reasoning object for display
-function formatReasoning(reasoning: {
-  factual: string[];
-  unfactual: string[];
-  subjective: string[];
-  objective: string[];
-}): string {
+function formatReasoning(
+  reasoning: {
+    factual: string[];
+    unfactual: string[];
+    subjective: string[];
+    objective: string[];
+  },
+  sources?: string[]
+): string {
   type ReasoningKey = keyof typeof reasoning;
   const sections: { label: string; key: ReasoningKey }[] = [
     { label: "Factual", key: "factual" },
@@ -606,18 +611,57 @@ function formatReasoning(reasoning: {
     { label: "Subjective", key: "subjective" },
     { label: "Objective", key: "objective" },
   ];
+
+  function linkifySources(reason: string, sources?: string[]): string {
+    return reason.replace(/\[([0-9,\s]+)\]/g, (match, nums) => {
+      const buttons = (nums as string)
+        .split(",")
+        .map((n: string) => n.trim())
+        .filter((n: string) => n.length > 0)
+        .map(
+          (num: string) =>
+            `<button class="source-link-btn" data-source="${num}" aria-label="Open source ${num}">[${num}]</button>`
+        )
+        .join("");
+      return buttons;
+    });
+  }
+
   return sections
     .map(({ label, key }) =>
       Array.isArray(reasoning[key]) && reasoning[key].length
         ? `<div class="reasoning-subsection">
               <div class="reasoning-subheader">${label} Reasons</div>
               <ul>${(reasoning[key] as string[])
-                .map((reason: string) => `<li>${reason}</li>`)
+                .map(
+                  (reason: string) =>
+                    `<li>${linkifySources(reason, sources)}</li>`
+                )
                 .join("")}</ul>
             </div>`
         : ""
     )
     .join("");
+}
+
+function attachSourceLinkListeners(sources?: string[]) {
+  document
+    .querySelectorAll<HTMLButtonElement>(".source-link-btn")
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const num = btn.getAttribute("data-source");
+        if (!num || !sources) return;
+        const idx = parseInt(num, 10) - 1;
+        if (idx >= 0 && idx < sources.length) {
+          let url = sources[idx];
+          const mdMatch = /^\s*\[\s*\d+\s*\]\((.*?)\)\s*$/.exec(url);
+          if (mdMatch && mdMatch[1]) {
+            url = mdMatch[1].trim();
+          }
+          browser.tabs.create({ url });
+        }
+      });
+    });
 }
 
 // Handle analyze button click with enhanced error recovery and progress feedback
