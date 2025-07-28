@@ -75,6 +75,9 @@ async function initializePopup() {
       const { analysisResult, contentHash } =
         cachedReadability[`readability_cache_${currentUrl}`];
       showResults(analysisResult);
+      if (dom.pageUrl) {
+        dom.pageUrl.textContent = truncateUrl(state.currentUrl);
+      }
 
       // Add "Check for updates" button
       let checkUpdatesBtn = document.getElementById(
