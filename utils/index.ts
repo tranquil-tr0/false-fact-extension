@@ -35,14 +35,3 @@ export {
   type IconVisibilityTest
 } from './icon-generator.js';
 
-// Error recovery utilities
-export {
-  ErrorRecoveryService,
-  GracefulDegradationService,
-  errorRecoveryService,
-  gracefulDegradationService,
-  ErrorSeverity,
-  RecoveryStrategy,
-  type ErrorRecoveryPlan
-} from './error-recovery.js';
-

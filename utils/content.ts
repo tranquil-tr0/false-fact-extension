@@ -4,6 +4,7 @@
 
 import type { ExtractedContent } from '../types/models.js';
 import { AnalysisErrorType, ExtensionError } from '../types/errors.js';
+import murmurhash from 'murmurhash';
 
 // Content validation constants
 export const CONTENT_LIMITS = {
@@ -119,18 +120,8 @@ export function countWords(text: string): number {
 /**
  * Generates a hash for content caching
  */
-export function generateContentHash(content: string, url: string): string {
-  // Simple hash function for content identification
-  let hash = 0;
-  const input = content + url;
-  
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  
-  return Math.abs(hash).toString(36);
+export function generateContentHash(content: string): number {
+  return murmurhash.v3(content);
 }
 
 /**

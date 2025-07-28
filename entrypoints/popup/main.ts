@@ -160,34 +160,6 @@ async function initializePopup() {
   }
 }
 
-// Check for cached analysis results
-async function checkForCachedResults(url: string) {
-  try {
-    const response = await browser.runtime.sendMessage({
-      action: 'get-cached-result',
-      url: url
-    });
-
-    if (response.success && response.data) {
-      state.analysisResult = response.data;
-      showResults(response.data);
-      updateStatus('Showing cached results');
-    }
-  } catch (error) {
-    console.warn('Failed to check cached results:', error);
-    // Don't show error for cache failures
-  }
-}
-
-// Check if URL can be analyzed
-function isAnalyzableUrl(url: string): boolean {
-  if (!url || url.startsWith('chrome://') || url.startsWith('chrome-extension://') ||
-    url.startsWith('moz-extension://') || url.startsWith('about:')) {
-    return false;
-  }
-  return true;
-}
-
 // Update UI state with enhanced progress indicators
 function updateUIState(newStatus: PopupState['analysisStatus']) {
   const previousStatus = state.analysisStatus;

@@ -28,6 +28,7 @@
   "dependencies": {
     "@google/genai": "^1.11.0",
     "@mozilla/readability": "^0.6.0",
+    "murmurhash": "^2.0.1",
     "turndown": "^7.2.0"
   }
 }

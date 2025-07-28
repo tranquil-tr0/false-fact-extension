@@ -9,7 +9,6 @@ import {
   createAnalysisError,
   type AnalysisError
 } from '../types/index.js';
-import { storageManager, type UserPreferences } from '../services/storage.js';
 import { iconManager } from '../services/icon-manager.js';
 
 /**
@@ -86,60 +85,6 @@ class BackgroundService {
         case 'retry-analysis':
           this.handleRetryAnalysis(sender.tab?.id ?? message.tabId)
             .then(result => sendResponse({ success: true, data: result }))
-            .catch(error => sendResponse({
-              success: false,
-              error: this.formatError(error)
-            }));
-          return true;
-
-        case 'get-cached-result':
-          this.handleGetCachedResult(message.url)
-            .then(result => sendResponse({ success: true, data: result }))
-            .catch(error => sendResponse({
-              success: false,
-              error: this.formatError(error)
-            }));
-          return true;
-
-        case 'get-user-preferences':
-          this.handleGetUserPreferences()
-            .then(prefs => sendResponse({ success: true, data: prefs }))
-            .catch(error => sendResponse({
-              success: false,
-              error: this.formatError(error)
-            }));
-          return true;
-
-        case 'set-user-preferences':
-          this.handleSetUserPreferences(message.preferences)
-            .then(() => sendResponse({ success: true }))
-            .catch(error => sendResponse({
-              success: false,
-              error: this.formatError(error)
-            }));
-          return true;
-
-        case 'get-cache-stats':
-          this.handleGetCacheStats()
-            .then(stats => sendResponse({ success: true, data: stats }))
-            .catch(error => sendResponse({
-              success: false,
-              error: this.formatError(error)
-            }));
-          return true;
-
-        case 'clear-cache':
-          this.handleClearCache()
-            .then(() => sendResponse({ success: true }))
-            .catch(error => sendResponse({
-              success: false,
-              error: this.formatError(error)
-            }));
-          return true;
-
-        case 'get-storage-usage':
-          this.handleGetStorageUsage()
-            .then(usage => sendResponse({ success: true, data: usage }))
             .catch(error => sendResponse({
               success: false,
               error: this.formatError(error)
@@ -230,9 +175,6 @@ class BackgroundService {
       workflow.result = analysisResult;
       iconManager.updateIconFromAnalysisResult(tabId, analysisResult);
 
-      // Cache the result
-      await this.cacheResult(data.url, analysisResult);
-
       return analysisResult;
 
     } catch (error) {
@@ -313,9 +255,6 @@ class BackgroundService {
       workflow.status = 'complete';
       workflow.result = analysisResult;
       iconManager.updateIconFromAnalysisResult(tabId, analysisResult);
-
-      // Cache the result
-      await this.cacheResult(tab.url, analysisResult);
 
       return analysisResult;
 
@@ -494,121 +433,6 @@ class BackgroundService {
     }
     return await this.handleStartAnalysis({ extractionMethod }, tabId);
   }
-
-  /**
-   * Handles getting cached results
-   */
-  private async handleGetCachedResult(url: string): Promise<AnalysisResult | null> {
-    if (!url) {
-      return null;
-    }
-
-    try {
-      return await storageManager.getCachedResult(url);
-    } catch (error) {
-      console.warn('Failed to get cached result:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Caches analysis result using storage manager
-   */
-  private async cacheResult(url: string, result: AnalysisResult): Promise<void> {
-    try {
-      await storageManager.cacheResult(url, result);
-    } catch (error) {
-      console.warn('Failed to cache analysis result:', error);
-      // Don't throw error for caching failures
-    }
-  }
-
-  /**
-   * Handles getting user preferences
-   */
-  private async handleGetUserPreferences(): Promise<UserPreferences> {
-    try {
-      return await storageManager.getUserPreferences();
-    } catch (error) {
-      console.warn('Failed to get user preferences:', error);
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        'Failed to retrieve user preferences',
-        true,
-        'Please try again later'
-      );
-    }
-  }
-
-  /**
-   * Handles setting user preferences
-   */
-  private async handleSetUserPreferences(preferences: Partial<UserPreferences>): Promise<void> {
-    try {
-      await storageManager.setUserPreferences(preferences);
-    } catch (error) {
-      console.error('Failed to set user preferences:', error);
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        'Failed to save user preferences',
-        true,
-        'Please try again later'
-      );
-    }
-  }
-
-  /**
-   * Handles getting cache statistics
-   */
-  private async handleGetCacheStats() {
-    try {
-      return await storageManager.getCacheStats();
-    } catch (error) {
-      console.warn('Failed to get cache stats:', error);
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        'Failed to retrieve cache statistics',
-        true,
-        'Please try again later'
-      );
-    }
-  }
-
-  /**
-   * Handles clearing cache
-   */
-  private async handleClearCache(): Promise<void> {
-    try {
-      await storageManager.clearCache();
-    } catch (error) {
-      console.error('Failed to clear cache:', error);
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        'Failed to clear cache',
-        true,
-        'Please try again later'
-      );
-    }
-  }
-
-  /**
-   * Handles getting storage usage information
-   */
-  private async handleGetStorageUsage() {
-    try {
-      return await storageManager.getStorageUsage();
-    } catch (error) {
-      console.warn('Failed to get storage usage:', error);
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        'Failed to retrieve storage usage information',
-        true,
-        'Please try again later'
-      );
-    }
-  }
-
-
 
   /**
    * Gets workflow for a specific tab
