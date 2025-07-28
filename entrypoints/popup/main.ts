@@ -25,6 +25,8 @@ interface PopupState {
   errorType: string | null;
   analysisStartTime: number | null;
   canCancel: boolean;
+  lastAnalysisType: "selection" | "article";
+  lastAnalyzedText: string | null;
 }
 let state: PopupState = {
   currentUrl: "",
@@ -34,6 +36,8 @@ let state: PopupState = {
   errorType: null,
   analysisStartTime: null,
   canCancel: false,
+  lastAnalysisType: "article",
+  lastAnalyzedText: null,
 };
 
 const dom = {
@@ -99,7 +103,8 @@ async function initializePopup() {
 
     if (dom.highlightedBtn) {
       dom.highlightedBtn.style.display = hasSelection ? "" : "none";
-      dom.highlightedBtn.onclick = () => analyzeHighlightedText(selectedText);
+      dom.highlightedBtn.onclick = () =>
+        handleSelectionAnalysisClick(selectedText);
     }
 
     // Check for cached readability analysis by URL
@@ -153,7 +158,7 @@ async function initializePopup() {
         const newHash = generateContentHash(extractionResult.content);
         if (newHash !== contentHash) {
           // Content changed, trigger new analysis
-          await handleAnalyzeClick();
+          await analyzeArticle();
         } else {
           checkUpdatesBtn.textContent = "Article is unchanged.";
           sendToast("Article has not been updated. Content is unchanged.");
@@ -188,6 +193,46 @@ function adjustPopupMainGap() {
     } else {
       popupMain.style.gap = "20px";
     }
+  }
+}
+
+/**
+ * handleSelectionAnalysisClick
+ * @param selectedText - The text to analyze (from selection)
+ */
+async function handleSelectionAnalysisClick(selectedText: string) {
+  state.lastAnalysisType = "selection";
+  state.lastAnalyzedText = selectedText;
+  try {
+    if (!selectedText) {
+      showError(
+        "No Highlighted Text",
+        "No highlighted text was found. Please select text and try again.",
+        "no_highlighted_text"
+      );
+      return;
+    }
+
+    // --- Caching logic for highlighted text ---
+    const highlightedHash = generateContentHash(selectedText);
+    const cachedSelection = await browser.storage.local.get(
+      `selection_cache_${highlightedHash}`
+    );
+    if (
+      cachedSelection &&
+      cachedSelection[`selection_cache_${highlightedHash}`]
+    ) {
+      showResults(cachedSelection[`selection_cache_${highlightedHash}`]);
+      return;
+    } else {
+      analyzeHighlightedText(selectedText);
+    }
+  } catch (error) {
+    showError(
+      "Failed to check for cached selection",
+      "An unexpected error occurred while checking for cached selection. Please try again.",
+      "unexpected_error"
+    );
   }
 }
 
@@ -228,25 +273,7 @@ async function analyzeHighlightedText(selectedText: string) {
       return;
     }
 
-    // --- Caching logic for highlighted text ---
-    const highlightedHash = generateContentHash(selectedText);
-    const cachedSelection = await browser.storage.local.get(
-      `selection_cache_${highlightedHash}`
-    );
-    if (
-      cachedSelection &&
-      cachedSelection[`selection_cache_${highlightedHash}`]
-    ) {
-      updateUIState("analyzing");
-      if (dom.progressBar) {
-        dom.progressBar.classList.remove("indeterminate");
-      }
-      updateProgress(100, "Loaded cached analysis");
-      sendToast("Loaded cached analysis");
-      showResults(cachedSelection[`selection_cache_${highlightedHash}`]);
-      return;
-    }
-    // --- End caching logic ---
+    const selectionHash = generateContentHash(selectedText);
 
     // Update UI to analyzing state
     updateUIState("analyzing");
@@ -271,7 +298,7 @@ async function analyzeHighlightedText(selectedText: string) {
       showResults(analysisResult.data);
       // Cache result
       await browser.storage.local.set({
-        [`selection_cache_${highlightedHash}`]: analysisResult.data,
+        [`selection_cache_${selectionHash}`]: analysisResult.data,
       });
     } else {
       const error = analysisResult.error;
@@ -309,6 +336,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
 
   switch (newStatus) {
     case "idle":
+      console.log("Last analysis type:", state.lastAnalysisType);
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
       if (dom.buttonText) dom.buttonText.textContent = "Analyze Content";
@@ -322,6 +350,8 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       break;
 
     case "extracting":
+      console.log("Last analysis type:", state.lastAnalysisType);
+
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = true;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.add("loading");
       if (dom.buttonText) dom.buttonText.textContent = "Extracting...";
@@ -348,6 +378,8 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       break;
 
     case "analyzing":
+      console.log("Last analysis type:", state.lastAnalysisType);
+
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = true;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.add("loading");
       if (dom.buttonText) dom.buttonText.textContent = "Analyzing...";
@@ -373,6 +405,8 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       break;
 
     case "complete":
+      console.log("Last analysis type:", state.lastAnalysisType);
+
       if (dom.analyzeBtn) dom.analyzeBtn.classList.add("hidden");
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
@@ -395,6 +429,8 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       break;
 
     case "error":
+      console.log("Last analysis type:", state.lastAnalysisType);
+
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
       if (dom.buttonText) dom.buttonText.textContent = "Try Again";
@@ -662,7 +698,9 @@ function attachSourceLinkListeners(sources?: string[]) {
 }
 
 // Handle analyze button click with enhanced error recovery and progress feedback
-async function handleAnalyzeClick() {
+async function analyzeArticle() {
+  state.lastAnalysisType = "article";
+  state.lastAnalyzedText = null;
   if (
     state.analysisStatus !== "idle" &&
     state.analysisStatus !== "error" &&
@@ -886,7 +924,7 @@ function handleAnalysisError(
         setTimeout(() => {
           if (state.analysisStatus === "error") {
             sendToast("Retrying analysis...");
-            setTimeout(() => handleAnalyzeClick(), 1000);
+            setTimeout(() => analyzeArticle(), 1000);
           }
         }, 5000);
       }
@@ -1253,8 +1291,7 @@ function setupAnalysisTimeout(timeoutMs: number = 30000) {
 }
 
 // Initialize event listeners and accessibility features
-if (dom.analyzeBtn)
-  dom.analyzeBtn.addEventListener("click", handleAnalyzeClick);
+if (dom.analyzeBtn) dom.analyzeBtn.addEventListener("click", analyzeArticle);
 if (dom.cancelBtn) dom.cancelBtn.addEventListener("click", handleCancelClick);
 if (dom.retryBtn) dom.retryBtn.addEventListener("click", handleRetryClick);
 if (dom.helpBtn) dom.helpBtn.addEventListener("click", handleHelpClick);
@@ -1272,7 +1309,7 @@ function setupKeyboardShortcuts() {
       description: "Analyze content",
       action: () => {
         if (dom.analyzeBtn && !dom.analyzeBtn.disabled) {
-          handleAnalyzeClick();
+          analyzeArticle();
         }
       },
     },
@@ -1295,7 +1332,7 @@ function setupKeyboardShortcuts() {
       action: () => {
         if (state.analysisStatus === "error") {
           handleRetryClick();
-          handleAnalyzeClick();
+          analyzeArticle();
         }
       },
     },
@@ -1419,6 +1456,18 @@ function truncateUrl(url: string): string {
   }
 }
 
+function handleAnalyzeAgain() {
+  if (state.lastAnalysisType === "article") {
+    analyzeArticle();
+  } else {
+    if (state.lastAnalyzedText) {
+      analyzeHighlightedText(state.lastAnalyzedText);
+    } else {
+      sendToast("No text is selected to analyze");
+    }
+  }
+}
+
 // Setup result interactions with keyboard navigation
 function setupResultInteractions() {
   // Add event listeners to expandable sections
@@ -1456,11 +1505,11 @@ function setupResultInteractions() {
   const shareResultsBtn = document.getElementById("share-results-btn");
 
   if (analyzeAgainBtn) {
-    analyzeAgainBtn.addEventListener("click", () => {
+    analyzeAgainBtn.addEventListener("click", async () => {
       analyzeAgainBtn.classList.add("clicked");
-      setTimeout(() => {
+      setTimeout(async () => {
         analyzeAgainBtn.classList.remove("clicked");
-        handleAnalyzeClick();
+        handleAnalyzeAgain();
       }, 200);
     });
 
@@ -1508,13 +1557,12 @@ document.addEventListener("DOMContentLoaded", () => {
   initializeAccessibility();
 
   // Add event listeners
-  if (dom.analyzeBtn)
-    dom.analyzeBtn.addEventListener("click", handleAnalyzeClick);
+  if (dom.analyzeBtn) dom.analyzeBtn.addEventListener("click", analyzeArticle);
   if (dom.cancelBtn) dom.cancelBtn.addEventListener("click", handleCancelClick);
   if (dom.retryBtn)
     dom.retryBtn.addEventListener("click", () => {
       handleRetryClick();
-      handleAnalyzeClick();
+      analyzeArticle();
     });
   if (dom.helpBtn) dom.helpBtn.addEventListener("click", handleHelpClick);
 });
