@@ -10,51 +10,17 @@ import {
 } from "../../utils/accessibility.js";
 import { generateContentHash } from "../../utils/content.js";
 
-// Ensure browser API is available
-declare const browser: any;
-
-// DOM Elements
-const analyzeBtn = document.getElementById("analyze-btn") as HTMLButtonElement;
-const cancelBtn = document.getElementById("cancel-btn") as HTMLButtonElement;
-const loadingSpinner = document.getElementById(
-  "loading-spinner"
-) as HTMLElement;
-const progressContainer = document.getElementById(
-  "progress-container"
-) as HTMLElement;
-const progressBar = document.getElementById("progress-bar") as HTMLElement;
-const progressFill = document.getElementById("progress-fill") as HTMLElement;
-const progressText = document.getElementById("progress-text") as HTMLElement;
-const progressTime = document.getElementById("progress-time") as HTMLElement;
-const resultsSection = document.getElementById(
-  "results-section"
-) as HTMLElement;
-const resultDisplay = document.getElementById("result-display") as HTMLElement;
-const errorSection = document.getElementById("error-section") as HTMLElement;
-const errorTitle = document.getElementById("error-title") as HTMLElement;
-const errorDescription = document.getElementById(
-  "error-description"
-) as HTMLElement;
-const retryBtn = document.getElementById("retry-btn") as HTMLButtonElement;
-const helpBtn = document.getElementById("help-btn") as HTMLButtonElement;
-const statusMessage = document.getElementById("status-message") as HTMLElement;
-const pageUrl = document.getElementById("page-url") as HTMLElement;
-const buttonText = analyzeBtn.querySelector(".button-text") as HTMLElement;
-const highlightedBtn = document.getElementById(
-  "analyze-highlighted-btn"
-) as HTMLButtonElement;
-
 // State management
+type AnalysisStatus = "idle" | "extracting" | "analyzing" | "complete" | "error";
 interface PopupState {
   currentUrl: string;
-  analysisStatus: "idle" | "extracting" | "analyzing" | "complete" | "error";
+  analysisStatus: AnalysisStatus;
   analysisResult: AnalysisResult | null;
   errorMessage: string | null;
   errorType: string | null;
   analysisStartTime: number | null;
   canCancel: boolean;
 }
-
 let state: PopupState = {
   currentUrl: "",
   analysisStatus: "idle",
@@ -63,6 +29,28 @@ let state: PopupState = {
   errorType: null,
   analysisStartTime: null,
   canCancel: false,
+};
+
+const dom = {
+  analyzeBtn: document.getElementById("analyze-btn") as HTMLButtonElement | null,
+  cancelBtn: document.getElementById("cancel-btn") as HTMLButtonElement | null,
+  loadingSpinner: document.getElementById("loading-spinner"),
+  progressContainer: document.getElementById("progress-container"),
+  progressBar: document.getElementById("progress-bar"),
+  progressFill: document.getElementById("progress-fill"),
+  progressText: document.getElementById("progress-text"),
+  progressTime: document.getElementById("progress-time"),
+  resultsSection: document.getElementById("results-section"),
+  resultDisplay: document.getElementById("result-display"),
+  errorSection: document.getElementById("error-section"),
+  errorTitle: document.getElementById("error-title"),
+  errorDescription: document.getElementById("error-description"),
+  retryBtn: document.getElementById("retry-btn") as HTMLButtonElement | null,
+  helpBtn: document.getElementById("help-btn") as HTMLButtonElement | null,
+  statusMessage: document.getElementById("status-message"),
+  pageUrl: document.getElementById("page-url"),
+  buttonText: document.querySelector("#analyze-btn .button-text"),
+  highlightedBtn: document.getElementById("analyze-highlighted-btn") as HTMLButtonElement | null,
 };
 
 // Initialize popup
@@ -102,7 +90,15 @@ async function initializePopup() {
       }
       checkUpdatesBtn.onclick = async () => {
         // Extract current article content
-        const extractionResult = await browser.tabs.sendMessage(tab.id, {
+        if (typeof tab.id !== "number") {
+          showError(
+            "No Active Tab",
+            "Please navigate to a webpage to analyze content.",
+            "no_tab"
+          );
+          return;
+        }
+        const extractionResult: any = await browser.tabs.sendMessage(Number(tab.id), {
           action: "extract-content-for-analysis",
         });
         if (!extractionResult || !extractionResult.content) {
@@ -149,21 +145,15 @@ async function initializePopup() {
     } catch (e) {
       // Ignore errors, fallback to default
     }
-    pageUrl.textContent = "Ready to analyze";
+    if (dom.pageUrl) dom.pageUrl.textContent = "Ready to analyze";
     updateStatus("Ready to analyze content");
-    analyzeBtn.disabled = false;
-    buttonText.textContent = "Analyze Content";
+    if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
+    if (dom.buttonText) dom.buttonText.textContent = "Analyze Content";
 
-    if (hasSelection) {
-      highlightedBtn.style.display = "";
-    } else {
-      highlightedBtn.style.display = "none";
+    if (dom.highlightedBtn) {
+      dom.highlightedBtn.style.display = hasSelection ? "" : "none";
+      dom.highlightedBtn.onclick = () => analyzeHighlightedText(selectedText);
     }
-
-    highlightedBtn.addEventListener("click", () => {
-      // selectedText is defined in the same scope as highlightedBtn
-      analyzeHighlightedText(selectedText);
-    });
   } catch (error) {
     console.error("Failed to initialize popup:", error);
     showError(
@@ -194,12 +184,12 @@ async function analyzeHighlightedText(selectedText: string) {
       return;
     }
     state.currentUrl = tab.url || "";
-    if (pageUrl) {
-      pageUrl.textContent = truncateUrl(state.currentUrl);
+    if (dom.pageUrl) {
+      dom.pageUrl.textContent = truncateUrl(state.currentUrl);
     }
     // Show initial progress animation
-    if (progressBar) {
-      progressBar.classList.add("indeterminate");
+    if (dom.progressBar) {
+      dom.progressBar.classList.add("indeterminate");
     }
     // Use selectedText for extraction
     if (!selectedText) {
@@ -218,8 +208,8 @@ async function analyzeHighlightedText(selectedText: string) {
     );
     if (cached && cached[`analysis_${highlightedHash}`]) {
       updateUIState("analyzing");
-      if (progressBar) {
-        progressBar.classList.remove("indeterminate");
+      if (dom.progressBar) {
+        dom.progressBar.classList.remove("indeterminate");
       }
       updateProgress(100, "Loaded cached analysis");
       showSuccessFeedback("Loaded cached analysis");
@@ -230,8 +220,8 @@ async function analyzeHighlightedText(selectedText: string) {
 
     // Update UI to analyzing state
     updateUIState("analyzing");
-    if (progressBar) {
-      progressBar.classList.remove("indeterminate");
+    if (dom.progressBar) {
+      dom.progressBar.classList.remove("indeterminate");
     }
     updateProgress(60, "Analyzing highlighted text for credibility...");
     // Send to background script for analysis
@@ -281,20 +271,20 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
   state.analysisStatus = newStatus;
 
   // Hide all sections first
-  resultsSection.classList.add("hidden");
-  errorSection.classList.add("hidden");
+  if (dom.resultsSection) dom.resultsSection.classList.add("hidden");
+  if (dom.errorSection) dom.errorSection.classList.add("hidden");
 
   // Update progress stages
   updateProgressStages(newStatus);
 
   switch (newStatus) {
     case "idle":
-      analyzeBtn.disabled = false;
-      analyzeBtn.classList.remove("loading");
-      buttonText.textContent = "Analyze Content";
-      loadingSpinner.classList.add("hidden");
-      progressContainer.classList.add("hidden");
-      cancelBtn.classList.add("hidden");
+      if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
+      if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
+      if (dom.buttonText) dom.buttonText.textContent = "Analyze Content";
+      if (dom.loadingSpinner) dom.loadingSpinner.classList.add("hidden");
+      if (dom.progressContainer) dom.progressContainer.classList.add("hidden");
+      if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
       state.canCancel = false;
       state.analysisStartTime = null;
       stopProgressTimer();
@@ -302,18 +292,18 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       break;
 
     case "extracting":
-      analyzeBtn.disabled = true;
-      analyzeBtn.classList.add("loading");
-      buttonText.textContent = "Extracting...";
-      loadingSpinner.classList.remove("hidden");
-      progressContainer.classList.remove("hidden");
-      cancelBtn.classList.remove("hidden");
+      if (dom.analyzeBtn) dom.analyzeBtn.disabled = true;
+      if (dom.analyzeBtn) dom.analyzeBtn.classList.add("loading");
+      if (dom.buttonText) dom.buttonText.textContent = "Extracting...";
+      if (dom.loadingSpinner) dom.loadingSpinner.classList.remove("hidden");
+      if (dom.progressContainer) dom.progressContainer.classList.remove("hidden");
+      if (dom.cancelBtn) dom.cancelBtn.classList.remove("hidden");
       state.canCancel = true;
       state.analysisStartTime = Date.now();
 
       // Show indeterminate progress initially
-      if (progressBar) {
-        progressBar.classList.add("indeterminate");
+      if (dom.progressBar) {
+        dom.progressBar.classList.add("indeterminate");
       }
 
       updateProgress(20, "Extracting content from page...");
@@ -321,23 +311,23 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       updateStatus("Extracting content from page...");
 
       // Add pulsing effect to progress text
-      if (progressText) {
-        progressText.classList.add("pulsing");
+      if (dom.progressText) {
+        dom.progressText.classList.add("pulsing");
       }
       break;
 
     case "analyzing":
-      analyzeBtn.disabled = true;
-      analyzeBtn.classList.add("loading");
-      buttonText.textContent = "Analyzing...";
-      loadingSpinner.classList.remove("hidden");
-      progressContainer.classList.remove("hidden");
-      cancelBtn.classList.remove("hidden");
+      if (dom.analyzeBtn) dom.analyzeBtn.disabled = true;
+      if (dom.analyzeBtn) dom.analyzeBtn.classList.add("loading");
+      if (dom.buttonText) dom.buttonText.textContent = "Analyzing...";
+      if (dom.loadingSpinner) dom.loadingSpinner.classList.remove("hidden");
+      if (dom.progressContainer) dom.progressContainer.classList.remove("hidden");
+      if (dom.cancelBtn) dom.cancelBtn.classList.remove("hidden");
       state.canCancel = true;
 
       // Switch from indeterminate to determinate progress
-      if (progressBar) {
-        progressBar.classList.remove("indeterminate");
+      if (dom.progressBar) {
+        dom.progressBar.classList.remove("indeterminate");
       }
 
       // Animate progress transition
@@ -351,14 +341,14 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       break;
 
     case "complete":
-      analyzeBtn.classList.add("hidden");
-      analyzeBtn.disabled = false;
-      analyzeBtn.classList.remove("loading");
-      buttonText.textContent = "Analyze Again";
-      loadingSpinner.classList.add("hidden");
-      progressContainer.classList.add("hidden");
-      cancelBtn.classList.add("hidden");
-      resultsSection.classList.remove("hidden");
+      if (dom.analyzeBtn) dom.analyzeBtn.classList.add("hidden");
+      if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
+      if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
+      if (dom.buttonText) dom.buttonText.textContent = "Analyze Again";
+      if (dom.loadingSpinner) dom.loadingSpinner.classList.add("hidden");
+      if (dom.progressContainer) dom.progressContainer.classList.add("hidden");
+      if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
+      if (dom.resultsSection) dom.resultsSection.classList.remove("hidden");
       state.canCancel = false;
       stopProgressTimer();
       updateProgress(100, "Analysis complete");
@@ -367,26 +357,26 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       showSuccessFeedback("Analysis complete");
 
       // Add entrance animation to results
-      if (resultsSection) {
-        resultsSection.style.animation = "fadeIn 0.5s ease-out";
+      if (dom.resultsSection) {
+        dom.resultsSection.style.animation = "fadeIn 0.5s ease-out";
       }
       break;
 
     case "error":
-      analyzeBtn.disabled = false;
-      analyzeBtn.classList.remove("loading");
-      buttonText.textContent = "Try Again";
-      loadingSpinner.classList.add("hidden");
-      progressContainer.classList.add("hidden");
-      cancelBtn.classList.add("hidden");
-      errorSection.classList.remove("hidden");
+      if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
+      if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
+      if (dom.buttonText) dom.buttonText.textContent = "Try Again";
+      if (dom.loadingSpinner) dom.loadingSpinner.classList.add("hidden");
+      if (dom.progressContainer) dom.progressContainer.classList.add("hidden");
+      if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
+      if (dom.errorSection) dom.errorSection.classList.remove("hidden");
       state.canCancel = false;
       stopProgressTimer();
       updateStatus("Analysis failed");
 
       // Add entrance animation to error section
-      if (errorSection) {
-        errorSection.style.animation = "fadeIn 0.4s ease-out";
+      if (dom.errorSection) {
+        dom.errorSection.style.animation = "fadeIn 0.4s ease-out";
       }
       break;
   }
@@ -394,15 +384,15 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
 
 // Update status message
 function updateStatus(message: string) {
-  statusMessage.textContent = message;
+  if (dom.statusMessage) dom.statusMessage.textContent = message;
 }
 
 // Show error state
 function showError(title: string, description: string, type: string) {
   state.errorMessage = description;
   state.errorType = type;
-  errorTitle.textContent = title;
-  errorDescription.textContent = description;
+  if (dom.errorTitle) dom.errorTitle.textContent = title;
+  if (dom.errorDescription) dom.errorDescription.textContent = description;
   updateUIState("error");
 }
 
@@ -412,7 +402,7 @@ function showResults(analysisResult: AnalysisResult) {
 
   // Create results display HTML
   const resultsHTML = createResultsHTML(analysisResult);
-  resultDisplay.innerHTML = resultsHTML;
+  if (dom.resultDisplay) dom.resultDisplay.innerHTML = resultsHTML;
 
   // Update UI state to complete
   updateUIState("complete");
@@ -420,27 +410,31 @@ function showResults(analysisResult: AnalysisResult) {
   // Add highlight animation to results with a slight delay for better visual feedback
   setTimeout(() => {
     // Find and animate the credibility score
-    const scoreElement = resultDisplay.querySelector(".credibility-score");
-    if (scoreElement) {
-      scoreElement.classList.add("highlight-animation");
+    if (dom.resultDisplay) {
+      const scoreElement = dom.resultDisplay.querySelector(".credibility-score");
+      if (scoreElement) {
+        scoreElement.classList.add("highlight-animation");
+      }
     }
 
     // Animate category bars sequentially
-    const categoryBars = resultDisplay.querySelectorAll(".category-fill");
-    categoryBars.forEach((element, index) => {
-      const bar = element as HTMLElement;
-      setTimeout(() => {
-        // Force a reflow to restart the animation
-        bar.style.width = "0%";
-
-        // Set the actual width after a tiny delay
+    if (dom.resultDisplay) {
+      const categoryBars = dom.resultDisplay.querySelectorAll(".category-fill");
+      categoryBars.forEach((element: Element, index: number) => {
+        const bar = element as HTMLElement;
         setTimeout(() => {
-          const percentage =
-            bar.parentElement?.nextElementSibling?.textContent || "0%";
-          bar.style.width = percentage;
-        }, 50);
-      }, index * 200); // Stagger the animations
-    });
+          // Force a reflow to restart the animation
+          bar.style.width = "0%";
+
+          // Set the actual width after a tiny delay
+          setTimeout(() => {
+            const percentage =
+              bar.parentElement?.nextElementSibling?.textContent || "0%";
+            bar.style.width = percentage;
+          }, 50);
+        }, index * 200); // Stagger the animations
+      });
+    }
   }, 300);
 
   // Add event listeners to expandable sections if they exist
@@ -602,13 +596,13 @@ async function handleAnalyzeClick() {
 
     // Store current URL for reference
     state.currentUrl = tab.url || "";
-    if (pageUrl) {
-      pageUrl.textContent = truncateUrl(state.currentUrl);
+    if (dom.pageUrl) {
+      dom.pageUrl.textContent = truncateUrl(state.currentUrl);
     }
 
     // Show initial progress animation
-    if (progressBar) {
-      progressBar.classList.add("indeterminate");
+    if (dom.progressBar) {
+      dom.progressBar.classList.add("indeterminate");
     }
 
     // Extract content from page using content script with timeout handling
@@ -670,8 +664,8 @@ async function handleAnalyzeClick() {
     const cached = await browser.storage.local.get(`analysis_${contentHash}`);
     if (cached && cached[`analysis_${contentHash}`]) {
       updateUIState("analyzing");
-      if (progressBar) {
-        progressBar.classList.remove("indeterminate");
+      if (dom.progressBar) {
+        dom.progressBar.classList.remove("indeterminate");
       }
       updateProgress(100, "Loaded cached analysis");
       showSuccessFeedback("Loaded cached analysis");
@@ -684,8 +678,8 @@ async function handleAnalyzeClick() {
     updateUIState("analyzing");
 
     // Switch from indeterminate to determinate progress
-    if (progressBar) {
-      progressBar.classList.remove("indeterminate");
+    if (dom.progressBar) {
+      dom.progressBar.classList.remove("indeterminate");
     }
 
     // Update progress to show we're starting analysis
@@ -927,18 +921,20 @@ const LONG_TIMEOUT = 60000; // 60 seconds
 
 // Update progress indicator with enhanced visual feedback
 function updateProgress(percentage: number, message: string) {
-  if (progressFill) {
+  if (dom.progressFill) {
     // Use smooth animation for progress updates
-    progressFill.style.width = `${percentage}%`;
+    dom.progressFill.style.width = `${percentage}%`;
   }
-
-  if (progressText) {
+ 
+  if (dom.progressText) {
     // Animate text change
-    progressText.style.opacity = "0";
-
+    dom.progressText.style.opacity = "0";
+ 
     setTimeout(() => {
-      progressText.textContent = message;
-      progressText.style.opacity = "1";
+      if (dom.progressText) {
+        dom.progressText.textContent = message;
+        dom.progressText.style.opacity = "1";
+      }
     }, 200);
   }
 }
@@ -957,15 +953,15 @@ function startProgressTimer() {
   setupTimeoutHandling();
 
   progressTimer = window.setInterval(() => {
-    if (state.analysisStartTime && progressTime) {
+    if (state.analysisStartTime && dom.progressTime) {
       const elapsed = Math.floor((Date.now() - state.analysisStartTime) / 1000);
-      progressTime.textContent = `${elapsed}s`;
+      dom.progressTime.textContent = `${elapsed}s`;
 
       // Add warning class when approaching timeout
       if (elapsed >= 20) {
-        progressTime.classList.add("warning");
+        dom.progressTime.classList.add("warning");
       } else {
-        progressTime.classList.remove("warning");
+        dom.progressTime.classList.remove("warning");
       }
     }
   }, 1000);
@@ -984,8 +980,8 @@ function stopProgressTimer() {
   }
 
   // Reset progress time display
-  if (progressTime) {
-    progressTime.classList.remove("warning");
+  if (dom.progressTime) {
+    dom.progressTime.classList.remove("warning");
   }
 }
 
@@ -1039,8 +1035,8 @@ function showTimeoutWarning() {
   `;
 
   // Add to progress container
-  if (progressContainer) {
-    progressContainer.appendChild(warningElement);
+  if (dom.progressContainer) {
+    dom.progressContainer.appendChild(warningElement);
 
     // Add show class after a small delay for animation
     setTimeout(() => {
@@ -1054,8 +1050,8 @@ function showTimeoutWarning() {
         // Remove warning and extend timeout
         warningElement.classList.remove("show");
         setTimeout(() => {
-          if (progressContainer.contains(warningElement)) {
-            progressContainer.removeChild(warningElement);
+          if (dom.progressContainer && dom.progressContainer.contains(warningElement)) {
+            dom.progressContainer.removeChild(warningElement);
           }
         }, 300);
 
@@ -1081,11 +1077,11 @@ function showTimeoutWarning() {
 
     // Auto-remove after 10 seconds if not clicked
     setTimeout(() => {
-      if (progressContainer.contains(warningElement)) {
+      if (dom.progressContainer && dom.progressContainer.contains(warningElement)) {
         warningElement.classList.remove("show");
         setTimeout(() => {
-          if (progressContainer.contains(warningElement)) {
-            progressContainer.removeChild(warningElement);
+          if (dom.progressContainer && dom.progressContainer.contains(warningElement)) {
+            dom.progressContainer.removeChild(warningElement);
           }
         }, 300);
       }
@@ -1100,8 +1096,8 @@ async function handleCancelClick() {
   }
 
   // Show cancellation in progress feedback
-  cancelBtn.disabled = true;
-  cancelBtn.textContent = "Cancelling...";
+  if (dom.cancelBtn) dom.cancelBtn.disabled = true;
+  if (dom.cancelBtn) dom.cancelBtn.textContent = "Cancelling...";
 
   try {
     // Send cancellation message to background script
@@ -1149,8 +1145,8 @@ async function handleCancelClick() {
   }
 
   // Reset cancel button state
-  cancelBtn.disabled = false;
-  cancelBtn.textContent = "Cancel";
+  if (dom.cancelBtn) dom.cancelBtn.disabled = false;
+  if (dom.cancelBtn) dom.cancelBtn.textContent = "Cancel";
 }
 
 // Enhanced timeout handling with user feedback
@@ -1171,10 +1167,10 @@ function setupAnalysisTimeout(timeoutMs: number = 30000) {
 }
 
 // Initialize event listeners and accessibility features
-analyzeBtn.addEventListener("click", handleAnalyzeClick);
-cancelBtn.addEventListener("click", handleCancelClick);
-retryBtn.addEventListener("click", handleRetryClick);
-helpBtn.addEventListener("click", handleHelpClick);
+if (dom.analyzeBtn) dom.analyzeBtn.addEventListener("click", handleAnalyzeClick);
+if (dom.cancelBtn) dom.cancelBtn.addEventListener("click", handleCancelClick);
+if (dom.retryBtn) dom.retryBtn.addEventListener("click", handleRetryClick);
+if (dom.helpBtn) dom.helpBtn.addEventListener("click", handleHelpClick);
 
 // Initialize when popup opens
 document.addEventListener("DOMContentLoaded", initializePopup);
@@ -1191,7 +1187,7 @@ function setupKeyboardShortcuts() {
       key: "a",
       description: "Analyze content",
       action: () => {
-        if (analyzeBtn && !analyzeBtn.disabled) {
+        if (dom.analyzeBtn && !dom.analyzeBtn.disabled) {
           handleAnalyzeClick();
         }
       },
@@ -1202,8 +1198,8 @@ function setupKeyboardShortcuts() {
       action: () => {
         if (
           state.canCancel &&
-          cancelBtn &&
-          !cancelBtn.classList.contains("hidden")
+          dom.cancelBtn &&
+          !dom.cancelBtn.classList.contains("hidden")
         ) {
           handleCancelClick();
         }
@@ -1304,7 +1300,7 @@ function updateProgressStages(currentStatus: PopupState["analysisStatus"]) {
   }
 
   // Update ARIA attributes for progress container
-  if (progressContainer) {
+  if (dom.progressContainer) {
     // Update aria-valuenow based on status
     let progressValue = 0;
     switch (currentStatus) {
@@ -1318,7 +1314,7 @@ function updateProgressStages(currentStatus: PopupState["analysisStatus"]) {
         progressValue = 100;
         break;
     }
-    progressContainer.setAttribute("aria-valuenow", progressValue.toString());
+    dom.progressContainer.setAttribute("aria-valuenow", progressValue.toString());
   }
 }
 
@@ -1354,14 +1350,14 @@ function showTransitionFeedback(message: string) {
 
 // Show success feedback with screen reader announcement
 function showSuccessFeedback(message: string) {
-  statusMessage.textContent = message;
-  statusMessage.classList.add("success-feedback");
+  if (dom.statusMessage) dom.statusMessage.textContent = message;
+  if (dom.statusMessage) dom.statusMessage.classList.add("success-feedback");
 
   // Announce to screen readers
   announceToScreenReader(message, "polite");
 
   setTimeout(() => {
-    statusMessage.classList.remove("success-feedback");
+    if (dom.statusMessage) dom.statusMessage.classList.remove("success-feedback");
   }, 2000);
 }
 
@@ -1477,11 +1473,11 @@ document.addEventListener("DOMContentLoaded", () => {
   initializeAccessibility();
 
   // Add event listeners
-  analyzeBtn.addEventListener("click", handleAnalyzeClick);
-  cancelBtn.addEventListener("click", handleCancelClick);
-  retryBtn.addEventListener("click", () => {
+  if (dom.analyzeBtn) dom.analyzeBtn.addEventListener("click", handleAnalyzeClick);
+  if (dom.cancelBtn) dom.cancelBtn.addEventListener("click", handleCancelClick);
+  if (dom.retryBtn) dom.retryBtn.addEventListener("click", () => {
     handleRetryClick();
     handleAnalyzeClick();
   });
-  helpBtn.addEventListener("click", handleHelpClick);
+  if (dom.helpBtn) dom.helpBtn.addEventListener("click", handleHelpClick);
 });
