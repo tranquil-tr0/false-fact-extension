@@ -83,30 +83,6 @@ async function initializePopup() {
       const { analysisResult, contentHash } =
         cachedReadability[`readability_cache_${currentUrl}`];
       showResults(analysisResult);
-      // Show "Analyze Highlighted Text" button if there is highlighted text
-      if (dom.highlightedBtn) {
-        let hasSelection = false;
-        let selectedText = "";
-        try {
-          const [tab] = await browser.tabs.query({
-            active: true,
-            currentWindow: true,
-          });
-          if (tab.id) {
-            const selectionResult = await browser.tabs.sendMessage(tab.id, {
-              action: "get-selected-text",
-            });
-            selectedText =
-              selectionResult && selectionResult.text
-                ? selectionResult.text.trim()
-                : "";
-            hasSelection = !!selectedText;
-          }
-        } catch (e) {
-          // Ignore errors, fallback to default
-        }
-        dom.highlightedBtn.style.display = hasSelection ? "" : "none";
-      }
       if (dom.pageUrl) {
         dom.pageUrl.textContent = truncateUrl(state.currentUrl);
       }
@@ -159,7 +135,6 @@ async function initializePopup() {
           }, 2000);
         }
       };
-      return;
     }
 
     // Check for selected text in the active tab
@@ -192,6 +167,9 @@ async function initializePopup() {
       dom.highlightedBtn.style.display = hasSelection ? "" : "none";
       dom.highlightedBtn.onclick = () => analyzeHighlightedText(selectedText);
     }
+
+    // gap between the highted text button and the results panel (in analysis section)
+    adjustPopupMainGap();
   } catch (error) {
     console.error("Failed to initialize popup:", error);
     showError(
@@ -199,6 +177,23 @@ async function initializePopup() {
       "Failed to initialize the extension. Please try again.",
       "init_error"
     );
+  }
+}
+
+/**
+ * Adjusts the gap of .popup-main based on .analyze-section height.
+ */
+function adjustPopupMainGap() {
+  const analyzeSection = document.querySelector(
+    ".analyze-section"
+  ) as HTMLElement | null;
+  const popupMain = document.querySelector(".popup-main") as HTMLElement | null;
+  if (analyzeSection && popupMain) {
+    if (analyzeSection.offsetHeight === 0) {
+      popupMain.style.gap = "0px";
+    } else {
+      popupMain.style.gap = "20px";
+    }
   }
 }
 
@@ -1250,9 +1245,6 @@ if (dom.cancelBtn) dom.cancelBtn.addEventListener("click", handleCancelClick);
 if (dom.retryBtn) dom.retryBtn.addEventListener("click", handleRetryClick);
 if (dom.helpBtn) dom.helpBtn.addEventListener("click", handleHelpClick);
 
-// Initialize when popup opens
-document.addEventListener("DOMContentLoaded", initializePopup);
-
 // Cleanup on popup close
 window.addEventListener("beforeunload", () => {
   stopProgressTimer();
@@ -1498,7 +1490,6 @@ function initializeAccessibility() {
 document.addEventListener("DOMContentLoaded", () => {
   // Initialize popup
   initializePopup();
-
   // Initialize accessibility features
   initializeAccessibility();
 

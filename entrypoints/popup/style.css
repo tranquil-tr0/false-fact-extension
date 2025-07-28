@@ -572,7 +572,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
 }
 
