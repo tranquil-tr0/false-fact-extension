@@ -129,7 +129,7 @@ async function initializePopup() {
           await handleAnalyzeClick();
         } else {
           checkUpdatesBtn.textContent = "Article is unchanged.";
-          updateStatus("Article has not been updated. Content is unchanged.");
+          sendToast("Article has not been updated. Content is unchanged.");
           setTimeout(() => {
             checkUpdatesBtn.textContent = "Check for updates";
           }, 2000);
@@ -159,7 +159,6 @@ async function initializePopup() {
       // Ignore errors, fallback to default
     }
     if (dom.pageUrl) dom.pageUrl.textContent = "Ready to analyze";
-    updateStatus("Ready to analyze content");
     if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
     if (dom.buttonText) dom.buttonText.textContent = "Analyze Content";
 
@@ -245,7 +244,7 @@ async function analyzeHighlightedText(selectedText: string) {
         dom.progressBar.classList.remove("indeterminate");
       }
       updateProgress(100, "Loaded cached analysis");
-      updateStatus("Loaded cached analysis");
+      sendToast("Loaded cached analysis");
       showResults(cached[`analysis_${highlightedHash}`]);
       return;
     }
@@ -270,7 +269,7 @@ async function analyzeHighlightedText(selectedText: string) {
     });
     if (analysisResult.success) {
       updateProgress(100, "Analysis complete");
-      updateStatus("Analysis complete");
+      sendToast("Analysis complete");
       showResults(analysisResult.data);
       // Cache result
       await browser.storage.local.set({
@@ -321,7 +320,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       state.canCancel = false;
       state.analysisStartTime = null;
       stopProgressTimer();
-      updateStatus("Ready to analyze content");
+      sendToast("Ready to analyze content");
       break;
 
     case "extracting":
@@ -342,7 +341,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
 
       updateProgress(20, "Extracting content from page...");
       startProgressTimer();
-      updateStatus("Extracting content from page...");
+      sendToast("Extracting content from page...");
 
       // Add pulsing effect to progress text
       if (dom.progressText) {
@@ -367,11 +366,11 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
 
       // Animate progress transition
       updateProgress(60, "Analyzing content for credibility...");
-      updateStatus("Analyzing content for credibility...");
+      sendToast("Analyzing content for credibility...");
 
       // Show success transition from previous state if applicable
       if (previousStatus === "extracting") {
-        updateStatus("Content extracted successfully");
+        sendToast("Content extracted successfully");
       }
       break;
 
@@ -387,9 +386,6 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       state.canCancel = false;
       stopProgressTimer();
       updateProgress(100, "Analysis complete");
-
-      // Show success feedback with animation
-      updateStatus("Analysis complete");
 
       // Add entrance animation to results
       if (dom.resultsSection) {
@@ -407,7 +403,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       if (dom.errorSection) dom.errorSection.classList.remove("hidden");
       state.canCancel = false;
       stopProgressTimer();
-      updateStatus("Analysis failed");
+      sendToast("Analysis failed");
 
       // Add entrance animation to error section
       if (dom.errorSection) {
@@ -420,7 +416,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
 /**
  * Show a toast notification with the given message.
  */
-function updateStatus(message: string) {
+function sendToast(message: string) {
   const toast = document.getElementById("toast-notification");
   if (!toast) return;
   toast.textContent = message;
@@ -735,7 +731,7 @@ async function handleAnalyzeClick() {
       updateProgress(40, "Content extracted successfully");
 
       // Show brief success message
-      updateStatus("Content extracted successfully");
+      sendToast("Content extracted successfully");
     } catch (error) {
       console.error("Content extraction failed:", error);
 
@@ -775,7 +771,7 @@ async function handleAnalyzeClick() {
         dom.progressBar.classList.remove("indeterminate");
       }
       updateProgress(100, "Loaded cached analysis");
-      updateStatus("Loaded cached analysis");
+      sendToast("Loaded cached analysis");
       showResults(cached[`analysis_${contentHash}`]);
       return;
     }
@@ -813,16 +809,16 @@ async function handleAnalyzeClick() {
         if (analysisResult.data.confidence <= 30) {
           const reasoningStr = JSON.stringify(analysisResult.data.reasoning);
           if (reasoningStr && reasoningStr.includes("Fallback analysis")) {
-            updateStatus(
+            sendToast(
               "Analysis completed with limited service - results may be less accurate"
             );
           } else {
             // Show success animation
-            updateStatus("Analysis complete");
+            sendToast("Analysis complete");
           }
         } else {
           // Show success animation
-          updateStatus("Analysis complete");
+          sendToast("Analysis complete");
         }
 
         // Show results with highlight animation
@@ -910,7 +906,7 @@ function handleAnalysisError(
       if (retryable) {
         setTimeout(() => {
           if (state.analysisStatus === "error") {
-            updateStatus("Retrying analysis...");
+            sendToast("Retrying analysis...");
             setTimeout(() => handleAnalyzeClick(), 1000);
           }
         }, 5000);
@@ -984,12 +980,12 @@ function handleHelpClick() {
     helpMessages["unexpected_error"];
 
   // Show help message in status
-  updateStatus(`Help: ${helpMessage}`);
+  sendToast(`Help: ${helpMessage}`);
 
   // Reset status after 5 seconds
   setTimeout(() => {
     if (state.analysisStatus === "error") {
-      updateStatus("Analysis failed");
+      sendToast("Analysis failed");
     }
   }, 5000);
 }
@@ -1008,15 +1004,10 @@ function handleShareResults() {
   navigator.clipboard
     .writeText(shareText)
     .then(() => {
-      updateStatus("Results copied to clipboard");
-      setTimeout(() => {
-        if (state.analysisStatus === "complete") {
-          updateStatus("Analysis complete");
-        }
-      }, 2000);
+      sendToast("Results copied to clipboard");
     })
     .catch(() => {
-      updateStatus("Failed to copy results");
+      sendToast("Failed to copy results");
     });
 }
 
@@ -1109,7 +1100,7 @@ function setupTimeoutHandling() {
   setTimeout(() => {
     if (state.analysisStatus === "analyzing") {
       // If in analyzing phase for too long, show notification
-      updateStatus("Analysis is taking longer than expected...");
+      sendToast("Analysis is taking longer than expected...");
     }
   }, SHORT_TIMEOUT);
 
@@ -1233,7 +1224,7 @@ async function handleCancelClick() {
 
   // Reset UI state with cancellation feedback
   updateUIState("idle");
-  updateStatus("Analysis cancelled by user");
+  sendToast("Analysis cancelled by user");
 
   // Show brief cancellation message
   const feedbackElement = document.createElement("div");
