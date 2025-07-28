@@ -187,7 +187,6 @@ function adjustPopupMainGap() {
   ) as HTMLElement | null;
   const popupMain = document.querySelector(".popup-main") as HTMLElement | null;
   if (analyzeSection && popupMain) {
-    console.log(analyzeSection.offsetHeight, analyzeSection.clientHeight);
     if (analyzeSection.offsetHeight === 0) {
       popupMain.style.gap = "0px";
     } else {
@@ -225,7 +224,7 @@ async function handleSelectionAnalysisClick(selectedText: string) {
       showResults(cachedSelection[`selection_cache_${highlightedHash}`]);
       return;
     } else {
-      analyzeHighlightedText(selectedText);
+      analyzeText(selectedText);
     }
   } catch (error) {
     showError(
@@ -238,9 +237,9 @@ async function handleSelectionAnalysisClick(selectedText: string) {
 
 /**
  * Analyze highlighted text handler.
- * @param selectedText - The text to analyze (from selection)
+ * @param textToBeAnalyzed - The text to analyze (from selection)
  */
-async function analyzeHighlightedText(selectedText: string) {
+async function analyzeText(textToBeAnalyzed: string) {
   updateUIState("extracting");
   try {
     const [tab] = await browser.tabs.query({
@@ -264,7 +263,7 @@ async function analyzeHighlightedText(selectedText: string) {
       dom.progressBar.classList.add("indeterminate");
     }
     // Use selectedText for extraction
-    if (!selectedText) {
+    if (!textToBeAnalyzed) {
       showError(
         "No Highlighted Text",
         "No highlighted text was found. Please select text and try again.",
@@ -273,7 +272,7 @@ async function analyzeHighlightedText(selectedText: string) {
       return;
     }
 
-    const selectionHash = generateContentHash(selectedText);
+    const selectionHash = generateContentHash(textToBeAnalyzed);
 
     // Update UI to analyzing state
     updateUIState("analyzing");
@@ -286,7 +285,7 @@ async function analyzeHighlightedText(selectedText: string) {
       action: "analyze-content",
       tabId: tab.id,
       data: {
-        content: selectedText,
+        content: textToBeAnalyzed,
         url: state.currentUrl,
         title: document.title,
         contentType: "selection",
@@ -336,7 +335,6 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
 
   switch (newStatus) {
     case "idle":
-      console.log("Last analysis type:", state.lastAnalysisType);
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
       if (dom.buttonText) dom.buttonText.textContent = "Analyze Content";
@@ -350,8 +348,6 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       break;
 
     case "extracting":
-      console.log("Last analysis type:", state.lastAnalysisType);
-
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = true;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.add("loading");
       if (dom.buttonText) dom.buttonText.textContent = "Extracting...";
@@ -378,8 +374,6 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       break;
 
     case "analyzing":
-      console.log("Last analysis type:", state.lastAnalysisType);
-
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = true;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.add("loading");
       if (dom.buttonText) dom.buttonText.textContent = "Analyzing...";
@@ -405,12 +399,9 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       break;
 
     case "complete":
-      console.log("Last analysis type:", state.lastAnalysisType);
-
       if (dom.analyzeBtn) dom.analyzeBtn.classList.add("hidden");
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
-      if (dom.buttonText) dom.buttonText.textContent = "Analyze Again";
       if (dom.loadingSpinner) dom.loadingSpinner.classList.add("hidden");
       if (dom.progressContainer) dom.progressContainer.classList.add("hidden");
       if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
@@ -429,8 +420,6 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       break;
 
     case "error":
-      console.log("Last analysis type:", state.lastAnalysisType);
-
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
       if (dom.buttonText) dom.buttonText.textContent = "Try Again";
@@ -1461,7 +1450,7 @@ function handleAnalyzeAgain() {
     analyzeArticle();
   } else {
     if (state.lastAnalyzedText) {
-      analyzeHighlightedText(state.lastAnalyzedText);
+      analyzeText(state.lastAnalyzedText);
     } else {
       sendToast("No text is selected to analyze");
     }
@@ -1513,7 +1502,6 @@ function setupResultInteractions() {
       }, 200);
     });
 
-    // Add keyboard accessibility
     analyzeAgainBtn.setAttribute("aria-label", "Analyze content again");
   }
 
