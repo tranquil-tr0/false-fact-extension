@@ -1,7 +1,5 @@
-make use of extractSelectedText from content.ts actually in the main popup so that selected text can have "analyze selected text"
 add some kind of method for the user to know there are keyboard shortcuts
-ui formatting for source citations
-ui that shows the sources at all
-improve ui for the reasons
-make the ai api proxy server
-the share results button is non functional
+server add endpoint for nonarticle text (selection)
+extension icon
+add server caching future
+add social media future
