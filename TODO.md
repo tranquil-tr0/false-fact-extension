@@ -1,4 +1,4 @@
-add some kind of method for the user to know there are keyboard shortcuts
+add some kind of method for the user to know there is keyboard control - removed temporarily
 server add endpoint for nonarticle text (selection)
 extension icon
 add server caching future

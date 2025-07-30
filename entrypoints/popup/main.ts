@@ -1531,7 +1531,7 @@ function initializeAccessibility() {
   addSkipLink();
 
   // Setup keyboard shortcuts
-  setupKeyboardShortcuts();
+  //setupKeyboardShortcuts();
 
   // Check for high contrast mode
   enhanceForHighContrast();
