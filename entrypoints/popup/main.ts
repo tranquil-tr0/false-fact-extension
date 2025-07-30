@@ -1,5 +1,5 @@
 import "./style.css";
-import type { AnalysisResult } from "../../types/index.js";
+import type { AnalysisResult, ExtractedContent } from "../../types/index.js";
 import {
   registerKeyboardShortcuts,
   showKeyboardShortcutsHelp,
@@ -26,7 +26,6 @@ interface PopupState {
   analysisStartTime: number | null;
   canCancel: boolean;
   lastAnalysisType: "selection" | "article";
-  lastAnalyzedText: string | null;
 }
 let state: PopupState = {
   currentUrl: "",
@@ -37,7 +36,6 @@ let state: PopupState = {
   analysisStartTime: null,
   canCancel: false,
   lastAnalysisType: "article",
-  lastAnalyzedText: null,
 };
 
 const dom = {
@@ -59,7 +57,7 @@ const dom = {
   retryBtn: document.getElementById("retry-btn") as HTMLButtonElement | null,
   helpBtn: document.getElementById("help-btn") as HTMLButtonElement | null,
   pageUrl: document.getElementById("page-url"),
-  buttonText: document.querySelector("#analyze-btn .button-text"),
+  analyzeBtnText: document.querySelector("#analyze-btn .button-text"),
   highlightedBtn: document.getElementById(
     "analyze-highlighted-btn"
   ) as HTMLButtonElement | null,
@@ -71,7 +69,7 @@ async function initializePopup() {
     // Get current tab and URL
     const [tab] = await browser.tabs.query({
       active: true,
-      currentWindow: true,
+      lastFocusedWindow: true,
     });
     const currentUrl = tab?.url || "";
     state.currentUrl = currentUrl;
@@ -79,27 +77,19 @@ async function initializePopup() {
     // Check for selected text in the active tab
     let hasSelection = false;
     let selectedText = "";
-    try {
-      const [tab] = await browser.tabs.query({
-        active: true,
-        currentWindow: true,
+    if (tab.id) {
+      const selectionResult = await browser.tabs.sendMessage(tab.id, {
+        action: "get-selected-text",
       });
-      if (tab.id) {
-        const selectionResult = await browser.tabs.sendMessage(tab.id, {
-          action: "get-selected-text",
-        });
-        selectedText =
-          selectionResult && selectionResult.text
-            ? selectionResult.text.trim()
-            : "";
-        hasSelection = !!selectedText;
-      }
-    } catch (e) {
-      // Ignore errors, fallback to default
+      selectedText =
+        selectionResult && selectionResult.text
+          ? selectionResult.text.trim()
+          : "";
+      hasSelection = !!selectedText;
     }
     if (dom.pageUrl) dom.pageUrl.textContent = "Ready to analyze";
     if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
-    if (dom.buttonText) dom.buttonText.textContent = "Analyze Content";
+    if (dom.analyzeBtnText) dom.analyzeBtnText.textContent = "Analyze Content";
 
     if (dom.highlightedBtn) {
       dom.highlightedBtn.style.display = hasSelection ? "" : "none";
@@ -144,7 +134,7 @@ async function initializePopup() {
         const extractionResult: any = await browser.tabs.sendMessage(
           Number(tab.id),
           {
-            action: "extract-content-for-analysis",
+            action: "extract-article-text",
           }
         );
         if (!extractionResult || !extractionResult.content) {
@@ -201,7 +191,6 @@ function adjustPopupMainGap() {
  */
 async function handleSelectionAnalysisClick(selectedText: string) {
   state.lastAnalysisType = "selection";
-  state.lastAnalyzedText = selectedText;
   try {
     if (!selectedText) {
       showError(
@@ -224,7 +213,7 @@ async function handleSelectionAnalysisClick(selectedText: string) {
       showResults(cachedSelection[`selection_cache_${highlightedHash}`]);
       return;
     } else {
-      analyzeText(selectedText);
+      analyzeSelectedText();
     }
   } catch (error) {
     showError(
@@ -239,7 +228,7 @@ async function handleSelectionAnalysisClick(selectedText: string) {
  * Analyze highlighted text handler.
  * @param textToBeAnalyzed - The text to analyze (from selection)
  */
-async function analyzeText(textToBeAnalyzed: string) {
+async function analyzeSelectedText() {
   updateUIState("extracting");
   try {
     const [tab] = await browser.tabs.query({
@@ -254,6 +243,15 @@ async function analyzeText(textToBeAnalyzed: string) {
       );
       return;
     }
+    const selectedText: ExtractedContent = await browser.tabs.sendMessage(
+      tab.id,
+      {
+        action: "extract-selected-text",
+      }
+    );
+
+    console.log("Selected text for analysis:", selectedText);
+
     state.currentUrl = tab.url || "";
     if (dom.pageUrl) {
       dom.pageUrl.textContent = truncateUrl(state.currentUrl);
@@ -263,7 +261,7 @@ async function analyzeText(textToBeAnalyzed: string) {
       dom.progressBar.classList.add("indeterminate");
     }
     // Use selectedText for extraction
-    if (!textToBeAnalyzed) {
+    if (!selectedText) {
       showError(
         "No Highlighted Text",
         "No highlighted text was found. Please select text and try again.",
@@ -272,7 +270,7 @@ async function analyzeText(textToBeAnalyzed: string) {
       return;
     }
 
-    const selectionHash = generateContentHash(textToBeAnalyzed);
+    const selectionHash = generateContentHash(selectedText.content);
 
     // Update UI to analyzing state
     updateUIState("analyzing");
@@ -284,12 +282,7 @@ async function analyzeText(textToBeAnalyzed: string) {
     const analysisResult = await browser.runtime.sendMessage({
       action: "analyze-content",
       tabId: tab.id,
-      data: {
-        content: textToBeAnalyzed,
-        url: state.currentUrl,
-        title: document.title,
-        contentType: "selection",
-      },
+      data: selectedText,
     });
     if (analysisResult.success) {
       updateProgress(100, "Analysis complete");
@@ -337,7 +330,8 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
     case "idle":
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
-      if (dom.buttonText) dom.buttonText.textContent = "Analyze Content";
+      if (dom.analyzeBtnText)
+        dom.analyzeBtnText.textContent = "Analyze Content";
       if (dom.loadingSpinner) dom.loadingSpinner.classList.add("hidden");
       if (dom.progressContainer) dom.progressContainer.classList.add("hidden");
       if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
@@ -350,7 +344,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
     case "extracting":
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = true;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.add("loading");
-      if (dom.buttonText) dom.buttonText.textContent = "Extracting...";
+      if (dom.analyzeBtnText) dom.analyzeBtnText.textContent = "Extracting...";
       if (dom.loadingSpinner) dom.loadingSpinner.classList.remove("hidden");
       if (dom.progressContainer)
         dom.progressContainer.classList.remove("hidden");
@@ -376,7 +370,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
     case "analyzing":
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = true;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.add("loading");
-      if (dom.buttonText) dom.buttonText.textContent = "Analyzing...";
+      if (dom.analyzeBtnText) dom.analyzeBtnText.textContent = "Analyzing...";
       if (dom.loadingSpinner) dom.loadingSpinner.classList.remove("hidden");
       if (dom.progressContainer)
         dom.progressContainer.classList.remove("hidden");
@@ -422,7 +416,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
     case "error":
       if (dom.analyzeBtn) dom.analyzeBtn.disabled = false;
       if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
-      if (dom.buttonText) dom.buttonText.textContent = "Try Again";
+      if (dom.analyzeBtnText) dom.analyzeBtnText.textContent = "Try Again";
       if (dom.loadingSpinner) dom.loadingSpinner.classList.add("hidden");
       if (dom.progressContainer) dom.progressContainer.classList.add("hidden");
       if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
@@ -689,7 +683,6 @@ function attachSourceLinkListeners(sources?: string[]) {
 // Handle analyze button click with enhanced error recovery and progress feedback
 async function analyzeArticle() {
   state.lastAnalysisType = "article";
-  state.lastAnalyzedText = null;
   if (
     state.analysisStatus !== "idle" &&
     state.analysisStatus !== "error" &&
@@ -750,7 +743,7 @@ async function analyzeArticle() {
       // Race the extraction against the timeout
       extractionResult = await Promise.race([
         browser.tabs.sendMessage(tab.id, {
-          action: "extract-content-for-analysis",
+          action: "extract-article-text",
         }),
         extractionTimeout,
       ]);
@@ -808,12 +801,7 @@ async function analyzeArticle() {
       const analysisResult = await browser.runtime.sendMessage({
         action: "analyze-content",
         tabId: tab.id, // Include tab ID in the message
-        data: {
-          content: extractionResult.content,
-          url: extractionResult.url,
-          title: extractionResult.title,
-          contentType: "article",
-        },
+        data: extractionResult,
       });
 
       if (analysisResult.success) {
@@ -1262,29 +1250,6 @@ async function handleCancelClick() {
   if (dom.cancelBtn) dom.cancelBtn.textContent = "Cancel";
 }
 
-// Enhanced timeout handling with user feedback
-function setupAnalysisTimeout(timeoutMs: number = 30000) {
-  return setTimeout(() => {
-    if (
-      state.analysisStatus === "extracting" ||
-      state.analysisStatus === "analyzing"
-    ) {
-      handleCancelClick();
-      showError(
-        "Analysis Timeout",
-        "The analysis took too long and was automatically cancelled.",
-        "timeout"
-      );
-    }
-  }, timeoutMs);
-}
-
-// Initialize event listeners and accessibility features
-if (dom.analyzeBtn) dom.analyzeBtn.addEventListener("click", analyzeArticle);
-if (dom.cancelBtn) dom.cancelBtn.addEventListener("click", handleCancelClick);
-if (dom.retryBtn) dom.retryBtn.addEventListener("click", handleRetryClick);
-if (dom.helpBtn) dom.helpBtn.addEventListener("click", handleHelpClick);
-
 // Cleanup on popup close
 window.addEventListener("beforeunload", () => {
   stopProgressTimer();
@@ -1449,11 +1414,7 @@ function handleAnalyzeAgain() {
   if (state.lastAnalysisType === "article") {
     analyzeArticle();
   } else {
-    if (state.lastAnalyzedText) {
-      analyzeText(state.lastAnalyzedText);
-    } else {
-      sendToast("No text is selected to analyze");
-    }
+    analyzeSelectedText();
   }
 }
 
@@ -1550,7 +1511,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (dom.retryBtn)
     dom.retryBtn.addEventListener("click", () => {
       handleRetryClick();
-      analyzeArticle();
+      handleAnalyzeAgain();
     });
   if (dom.helpBtn) dom.helpBtn.addEventListener("click", handleHelpClick);
 });

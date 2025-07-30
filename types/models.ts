@@ -29,8 +29,8 @@ export interface ExtractedContent {
   url: string;
   extractionMethod: "readability" | "selection";
   contentType: "article" | "social-media" | "selection";
-  timestamp: number;
   wordCount: number;
+  timestamp: Date;
   last_edited: string;
 }
 

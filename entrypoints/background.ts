@@ -1,6 +1,6 @@
 import type {
   AnalysisResult,
-  ContentExtractionResult,
+  ExtractedContent,
   PopupState,
 } from "../types/index.js";
 import {
@@ -9,7 +9,6 @@ import {
   createAnalysisError,
   type AnalysisError,
 } from "../types/index.js";
-import content from "./content.js";
 
 // Placeholder for iconManager object with required methods
 // TODO: Implement iconManager functionality
@@ -122,12 +121,7 @@ class BackgroundService {
    * Handles content analysis request from new popup interface
    */
   private async handleAnalyzeContent(
-    data: {
-      content: string;
-      url: string;
-      title: string;
-      contentType: "selection" | "article";
-    },
+    data: ExtractedContent,
     tabId?: number
   ): Promise<AnalysisResult> {
     if (!tabId) {
@@ -168,26 +162,16 @@ class BackgroundService {
     iconManager.setAnalyzingState(tabId);
 
     try {
-      // Create content extraction result from provided data
-      const extractedContent: ContentExtractionResult = {
-        title: data.title,
-        content: data.content,
-        url: data.url,
-        contentType: data.contentType,
-        timestamp: Date.now(),
-        last_edited: (data as any).last_edited ?? new Date().toISOString(),
-      };
-
-      // Perform analysis based on extractionMethod
+      // Perform analysis based on content type
       let analysisResult: AnalysisResult;
       console.log("Extracted content:", data.content);
-      console.log(data.extractionMethod);
-      if (data.extractionMethod === "selection") {
+      console.log(data.contentType);
+      if (data.contentType === "selection") {
         console.log("Performing text analysis for selection method");
-        analysisResult = await this.performTextAnalysis(extractedContent);
+        analysisResult = await this.performTextAnalysis(data);
       } else {
         console.log("Performing article analysis");
-        analysisResult = await this.performArticleAnalysis(extractedContent);
+        analysisResult = await this.performArticleAnalysis(data);
       }
 
       // Update workflow with result
@@ -211,7 +195,7 @@ class BackgroundService {
    * Performs text analysis for selection extraction method
    */
   private async performTextAnalysis(
-    content: ContentExtractionResult
+    content: ExtractedContent
   ): Promise<AnalysisResult> {
     // Set up timeout for analysis
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -255,64 +239,10 @@ class BackgroundService {
   }
 
   /**
-   * Extracts content from the specified tab
-   */
-  private async extractContent(
-    tabId: number,
-    method: "readability" | "selection"
-  ): Promise<ContentExtractionResult> {
-    const action =
-      method === "readability"
-        ? "extract-article-text"
-        : "extract-selected-text";
-
-    try {
-      const response = await browser.tabs.sendMessage(tabId, { action });
-
-      if (response.error) {
-        throw new ExtensionError(
-          AnalysisErrorType.EXTRACTION_FAILED,
-          response.error,
-          true,
-          method === "selection"
-            ? "Please select text on the page and try again"
-            : "Please try selecting text manually instead"
-        );
-      }
-
-      return response as ContentExtractionResult;
-    } catch (error) {
-      if (error instanceof ExtensionError) {
-        throw error;
-      }
-
-      // Handle content script not available
-      if (
-        error instanceof Error &&
-        error.message.includes("Could not establish connection")
-      ) {
-        throw new ExtensionError(
-          AnalysisErrorType.EXTRACTION_FAILED,
-          "Unable to connect to page content",
-          true,
-          "Please refresh the page and try again"
-        );
-      }
-
-      throw new ExtensionError(
-        AnalysisErrorType.EXTRACTION_FAILED,
-        "Failed to extract content from page",
-        true,
-        "Please refresh the page and try again"
-      );
-    }
-  }
-
-  /**
    * Performs analysis using the api
    */
   private async performArticleAnalysis(
-    content: ContentExtractionResult
+    content: ExtractedContent
   ): Promise<AnalysisResult> {
     // Use last_edited if available, otherwise fallback to timestamp
     const last_edited =

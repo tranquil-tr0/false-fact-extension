@@ -29,22 +29,6 @@ export default defineContentScript({
         return true; // Keep message channel open for async response
       }
 
-      if (message.action === "extract-content-for-analysis") {
-        extractContentForAnalysis()
-          .then((result) => sendResponse(result))
-          .catch((error) => sendResponse({ error: error.message }));
-        return true; // Keep message channel open for async response
-      }
-
-      if (message.action === "get-selection-status") {
-        const selection = window.getSelection();
-        const hasSelection = selection
-          ? selection.toString().trim().length > 0
-          : false;
-        sendResponse({ hasSelection });
-        return true;
-      }
-
       // Respond with selected text for analyze-highlighted button
       if (message.action === "get-selected-text") {
         const selection = window.getSelection();
@@ -94,25 +78,20 @@ async function extractArticleText(): Promise<ExtractedContent> {
   const wordCount = countWords(content);
 
   // Create extraction result
-  const extractionResult: ExtractedContent = {
+  const extractedContent: ExtractedContent = {
     title,
     content,
     url: currentUrl,
     extractionMethod: "readability",
-    timestamp: Date.now(),
+    contentType: "article",
+    wordCount: wordCount,
+    timestamp: new Date(),
     last_edited: new Date(document.lastModified).toISOString(),
-  };
-
-  // Create extended content for validation
-  const extendedContent = {
-    ...extractionResult,
-    contentType: "article" as const,
-    wordCount,
   };
 
   // Validate content meets requirements
   try {
-    validateContent(extendedContent);
+    validateContent(extractedContent);
   } catch (error) {
     throw new Error(
       `Content validation failed: ${
@@ -121,7 +100,7 @@ async function extractArticleText(): Promise<ExtractedContent> {
     );
   }
 
-  return extractionResult;
+  return extractedContent;
 }
 
 /**
@@ -150,32 +129,24 @@ async function extractSelectedText(): Promise<ExtractedContent> {
     throw new Error("Selected text is empty after sanitization");
   }
 
-  // Title is always blank
-  const title = "";
-
   // Calculate word count
   const wordCount = countWords(content);
 
   // Create extraction result
-  const extractionResult: ExtractedContent = {
-    title,
-    content,
+  const extractedContent: ExtractedContent = {
+    title: "",
+    content: content,
     url: currentUrl,
     extractionMethod: "selection",
-    timestamp: Date.now(),
+    contentType: "selection",
+    wordCount: wordCount,
+    timestamp: new Date(),
     last_edited: new Date(document.lastModified).toISOString(),
-  };
-
-  // Create extended content for validation
-  const extendedContent = {
-    ...extractionResult,
-    contentType: "article" as const,
-    wordCount,
   };
 
   // Validate content meets requirements
   try {
-    validateContent(extendedContent);
+    validateContent(extractedContent);
   } catch (error) {
     throw new Error(
       `Selected content validation failed: ${
@@ -184,7 +155,7 @@ async function extractSelectedText(): Promise<ExtractedContent> {
     );
   }
 
-  return extractionResult;
+  return extractedContent;
 }
 
 /**

@@ -6,7 +6,6 @@
 export type {
   AnalysisResult,
   ExtractedContent,
-  ExtractedContent as ContentExtractionResult,
   IconState,
   AnalysisRequest,
   PopupState,
