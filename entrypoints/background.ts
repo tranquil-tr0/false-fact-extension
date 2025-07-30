@@ -9,6 +9,7 @@ import {
   createAnalysisError,
   type AnalysisError,
 } from "../types/index.js";
+import content from "./content.js";
 
 // Placeholder for iconManager object with required methods
 // TODO: Implement iconManager functionality
@@ -74,17 +75,6 @@ class BackgroundService {
             );
           return true; // Keep message channel open for async response
 
-        case "start-analysis":
-          this.handleStartAnalysis(message.data, tabId)
-            .then((result) => sendResponse({ success: true, data: result }))
-            .catch((error) =>
-              sendResponse({
-                success: false,
-                error: this.formatError(error),
-              })
-            );
-          return true; // Keep message channel open for async response
-
         case "get-analysis-status":
           const workflow = this.getWorkflowForTab(tabId);
           sendResponse({
@@ -96,17 +86,6 @@ class BackgroundService {
         case "cancel-analysis":
           this.handleCancelAnalysis(tabId)
             .then(() => sendResponse({ success: true }))
-            .catch((error) =>
-              sendResponse({
-                success: false,
-                error: this.formatError(error),
-              })
-            );
-          return true;
-
-        case "retry-analysis":
-          this.handleRetryAnalysis(sender.tab?.id ?? message.tabId)
-            .then((result) => sendResponse({ success: true, data: result }))
             .catch((error) =>
               sendResponse({
                 success: false,
@@ -147,8 +126,7 @@ class BackgroundService {
       content: string;
       url: string;
       title: string;
-      contentType: string;
-      extractionMethod: "readability" | "selection";
+      contentType: "selection" | "article";
     },
     tabId?: number
   ): Promise<AnalysisResult> {
@@ -195,16 +173,22 @@ class BackgroundService {
         title: data.title,
         content: data.content,
         url: data.url,
-        extractionMethod: data.extractionMethod,
+        contentType: data.contentType,
         timestamp: Date.now(),
         last_edited: (data as any).last_edited ?? new Date().toISOString(),
       };
 
-      // Perform analysis
-      const analysisResult = await this.performAnalysis(
-        extractedContent,
-        workflow
-      );
+      // Perform analysis based on extractionMethod
+      let analysisResult: AnalysisResult;
+      console.log("Extracted content:", data.content);
+      console.log(data.extractionMethod);
+      if (data.extractionMethod === "selection") {
+        console.log("Performing text analysis for selection method");
+        analysisResult = await this.performTextAnalysis(extractedContent);
+      } else {
+        console.log("Performing article analysis");
+        analysisResult = await this.performArticleAnalysis(extractedContent);
+      }
 
       // Update workflow with result
       workflow.status = "complete";
@@ -224,90 +208,48 @@ class BackgroundService {
   }
 
   /**
-   * Handles analysis start request from popup
+   * Performs text analysis for selection extraction method
    */
-  private async handleStartAnalysis(
-    data: { extractionMethod: "readability" | "selection" },
-    tabId?: number
+  private async performTextAnalysis(
+    content: ContentExtractionResult
   ): Promise<AnalysisResult> {
-    if (!tabId) {
-      throw new ExtensionError(
-        AnalysisErrorType.INVALID_CONTENT,
-        "No active tab found for analysis",
-        false,
-        "Please ensure you have an active tab open"
-      );
-    }
-
-    // Check if analysis is already in progress for this tab
-    const existingWorkflow = this.getWorkflowForTab(tabId);
-    if (
-      existingWorkflow &&
-      ["extracting", "analyzing"].includes(existingWorkflow.status)
-    ) {
-      throw new ExtensionError(
-        AnalysisErrorType.INVALID_CONTENT,
-        "Analysis already in progress for this tab",
-        false,
-        "Please wait for the current analysis to complete"
-      );
-    }
-
-    // Get tab information
-    const tab = await browser.tabs.get(tabId);
-    if (!tab.url) {
-      throw new ExtensionError(
-        AnalysisErrorType.INVALID_CONTENT,
-        "Unable to access tab URL",
-        false,
-        "Please refresh the page and try again"
-      );
-    }
-
-    // Create new workflow
-    const workflowId = this.generateWorkflowId();
-    const workflow: AnalysisWorkflow = {
-      id: workflowId,
-      tabId,
-      url: tab.url,
-      status: "extracting",
-      startTime: Date.now(),
-      retryCount: 0,
-    };
-
-    this.activeWorkflows.set(workflowId, workflow);
-    iconManager.setAnalyzingState(tabId);
-
+    // Set up timeout for analysis
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(
+          new ExtensionError(
+            AnalysisErrorType.API_UNAVAILABLE,
+            "Analysis timed out",
+            true,
+            "Please try again with shorter content"
+          )
+        );
+      }, this.analysisTimeout);
+    });
     try {
-      // Extract content from the page
-      const extractedContent = await this.extractContent(
-        tabId,
-        data.extractionMethod
-      );
-
-      // Update workflow status
-      workflow.status = "analyzing";
-      iconManager.setAnalyzingState(tabId);
-
-      // Perform analysis
-      const analysisResult = await this.performAnalysis(
-        extractedContent,
-        workflow
-      );
-
-      // Update workflow with result
-      workflow.status = "complete";
-      workflow.result = analysisResult;
-      iconManager.updateIconFromAnalysisResult(tabId, analysisResult);
-
-      return analysisResult;
+      const analysisPromise = (async function analyzeText({
+        content,
+      }: {
+        content: string;
+      }): Promise<import("../types/index.js").AnalysisResult> {
+        const payload = { content };
+        const response = await fetch(
+          "https://api.falsefact.tranquil.hackclub.app/analyze/text/long",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+        return await response.json();
+      })({
+        content: content.content,
+      });
+      return await Promise.race([analysisPromise, timeoutPromise]);
     } catch (error) {
-      // Update workflow with error
-      const analysisError = this.handleAnalysisError(error);
-      workflow.status = "error";
-      workflow.error = analysisError;
-      iconManager.setErrorState(tabId, analysisError.message);
-
       throw error;
     }
   }
@@ -369,9 +311,8 @@ class BackgroundService {
   /**
    * Performs analysis using the api
    */
-  private async performAnalysis(
-    content: ContentExtractionResult,
-    workflow: AnalysisWorkflow
+  private async performArticleAnalysis(
+    content: ContentExtractionResult
   ): Promise<AnalysisResult> {
     // Use last_edited if available, otherwise fallback to timestamp
     const last_edited =
@@ -399,7 +340,7 @@ class BackgroundService {
         content: string;
         title: string;
         url: string;
-        last_edited: Date | string;
+        last_edited: string;
       }): Promise<import("../types/index.js").AnalysisResult> {
         const payload = { content, title, url, last_edited };
         const response = await fetch(
@@ -454,49 +395,6 @@ class BackgroundService {
     );
 
     iconManager.resetIconForTab(tabId);
-  }
-
-  /**
-   * Handles analysis retry for a tab
-   */
-  private async handleRetryAnalysis(tabId?: number): Promise<AnalysisResult> {
-    if (!tabId) {
-      throw new ExtensionError(
-        AnalysisErrorType.INVALID_CONTENT,
-        "No active tab found for retry",
-        false,
-        "Please ensure you have an active tab open"
-      );
-    }
-    const workflow = this.getWorkflowForTab(tabId);
-    if (!workflow) {
-      throw new ExtensionError(
-        AnalysisErrorType.INVALID_CONTENT,
-        "No previous analysis found to retry",
-        false,
-        "Please start a new analysis"
-      );
-    }
-    if (workflow.retryCount >= this.maxRetries) {
-      throw new ExtensionError(
-        AnalysisErrorType.API_UNAVAILABLE,
-        "Maximum retry attempts exceeded",
-        false,
-        "Please try again later or with different content"
-      );
-    }
-    workflow.status = "extracting";
-    workflow.error = undefined;
-    workflow.startTime = Date.now();
-    // Extraction method must be explicit; fallback to 'readability' if not present
-    let extractionMethod: "readability" | "selection" = "readability";
-    if (workflow.result && "extractionMethod" in workflow.result) {
-      extractionMethod =
-        (workflow.result as any).extractionMethod ?? "readability";
-    } else if ((workflow as any).extractionMethod) {
-      extractionMethod = (workflow as any).extractionMethod;
-    }
-    return await this.handleStartAnalysis({ extractionMethod }, tabId);
   }
 
   /**

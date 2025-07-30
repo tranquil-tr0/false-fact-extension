@@ -8,16 +8,16 @@ export interface AnalysisResult {
   title: string;
   credibilityScore: number; // Overall score 0-100
   categories: {
-    factuality: number;      // Percentage 0-100
-    objectivity: number;   // Percentage 0-100
+    factuality: number; // Percentage 0-100
+    objectivity: number; // Percentage 0-100
   };
-  confidence: number;  // AI confidence 0-100
+  confidence: number; // AI confidence 0-100
   reasoning: {
     factual: string[];
     unfactual: string[];
     subjective: string[];
     objective: string[];
-  };   // Explanation of analysis
+  }; // Explanation of analysis
   timestamp: number;
   contentHash: string; // For caching
   sources?: string[];
@@ -27,23 +27,21 @@ export interface ExtractedContent {
   title: string;
   content: string;
   url: string;
-  extractionMethod: 'readability' | 'selection';
-  contentType: 'article' | 'social-media' | 'selection';
+  extractionMethod: "readability" | "selection";
+  contentType: "article" | "social-media" | "selection";
+  timestamp: number;
   wordCount: number;
-  timestamp: number;
-}
-
-export interface ContentExtractionResult {
-  title: string;
-  content: string;
-  url: string;
-  extractionMethod: 'readability' | 'selection';
-  timestamp: number;
   last_edited: string;
 }
 
 export interface IconState {
-  type: 'default' | 'analyzing' | 'high-credibility' | 'low-credibility' | 'opinion' | 'error';
+  type:
+    | "default"
+    | "analyzing"
+    | "high-credibility"
+    | "low-credibility"
+    | "opinion"
+    | "error";
   badgeText?: string;
   badgeColor?: string;
 }
@@ -51,12 +49,12 @@ export interface IconState {
 export interface AnalysisRequest {
   content: string;
   url: string;
-  contentType: 'article' | 'social-media' | 'selection';
+  contentType: "article" | "social-media" | "selection";
 }
 
 export interface PopupState {
   currentUrl: string;
-  analysisStatus: 'idle' | 'extracting' | 'analyzing' | 'complete' | 'error';
+  analysisStatus: "idle" | "extracting" | "analyzing" | "complete" | "error";
   analysisResult: AnalysisResult | null;
   errorMessage: string | null;
 }

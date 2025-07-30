@@ -812,7 +812,7 @@ async function analyzeArticle() {
           content: extractionResult.content,
           url: extractionResult.url,
           title: extractionResult.title,
-          contentType: extractionResult.contentType || "article",
+          contentType: "article",
         },
       });
 

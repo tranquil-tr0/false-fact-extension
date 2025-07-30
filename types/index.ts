@@ -6,16 +6,16 @@
 export type {
   AnalysisResult,
   ExtractedContent,
-  ContentExtractionResult,
+  ExtractedContent as ContentExtractionResult,
   IconState,
   AnalysisRequest,
-  PopupState
-} from './models.js';
+  PopupState,
+} from "./models.js";
 
 // Error types
 export {
   AnalysisErrorType,
   ExtensionError,
-  createAnalysisError
-} from './errors.js';
-export type { AnalysisError } from './errors.js';
+  createAnalysisError,
+} from "./errors.js";
+export type { AnalysisError } from "./errors.js";
