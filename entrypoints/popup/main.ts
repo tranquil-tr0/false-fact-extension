@@ -45,6 +45,7 @@ const dom = {
   cancelBtn: document.getElementById("cancel-btn") as HTMLButtonElement | null,
   loadingSpinner: document.getElementById("loading-spinner"),
   progressContainer: document.getElementById("progress-container"),
+  headerBar: document.getElementById("popup-header"),
   progressBar: document.getElementById("progress-bar"),
   progressFill: document.getElementById("progress-fill"),
   progressText: document.getElementById("progress-text"),
@@ -343,7 +344,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
         dom.analyzeBtnText.textContent = "Analyze Content";
       if (dom.loadingSpinner) dom.loadingSpinner.classList.add("hidden");
       if (dom.progressContainer) dom.progressContainer.classList.add("hidden");
-      if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
+      //if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
       state.canCancel = false;
       state.analysisStartTime = null;
       stopProgressTimer();
@@ -357,7 +358,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       if (dom.loadingSpinner) dom.loadingSpinner.classList.remove("hidden");
       if (dom.progressContainer)
         dom.progressContainer.classList.remove("hidden");
-      if (dom.cancelBtn) dom.cancelBtn.classList.remove("hidden");
+      //if (dom.cancelBtn) dom.cancelBtn.classList.remove("hidden");
       state.canCancel = true;
       state.analysisStartTime = Date.now();
 
@@ -383,7 +384,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       if (dom.loadingSpinner) dom.loadingSpinner.classList.remove("hidden");
       if (dom.progressContainer)
         dom.progressContainer.classList.remove("hidden");
-      if (dom.cancelBtn) dom.cancelBtn.classList.remove("hidden");
+      //if (dom.cancelBtn) dom.cancelBtn.classList.remove("hidden");
       state.canCancel = true;
 
       // Switch from indeterminate to determinate progress
@@ -407,8 +408,11 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       if (dom.analyzeBtn) dom.analyzeBtn.classList.remove("loading");
       if (dom.loadingSpinner) dom.loadingSpinner.classList.add("hidden");
       if (dom.progressContainer) dom.progressContainer.classList.add("hidden");
-      if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
+      //if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
       if (dom.resultsSection) dom.resultsSection.classList.remove("hidden");
+
+      if (dom.headerBar) dom.headerBar.classList.add("hidden");
+
       state.canCancel = false;
       stopProgressTimer();
       updateProgress(100, "Analysis complete");
@@ -428,7 +432,7 @@ function updateUIState(newStatus: PopupState["analysisStatus"]) {
       if (dom.analyzeBtnText) dom.analyzeBtnText.textContent = "Try Again";
       if (dom.loadingSpinner) dom.loadingSpinner.classList.add("hidden");
       if (dom.progressContainer) dom.progressContainer.classList.add("hidden");
-      if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
+      //if (dom.cancelBtn) dom.cancelBtn.classList.add("hidden");
       if (dom.errorSection) dom.errorSection.classList.remove("hidden");
       state.canCancel = false;
       stopProgressTimer();

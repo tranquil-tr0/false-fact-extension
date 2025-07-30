@@ -32,7 +32,8 @@ export default defineContentScript({
       // Respond with selected text for analyze-highlighted button
       if (message.action === "get-selected-text") {
         const selection = window.getSelection();
-        const selectedText = selection ? selection.toString().trim() : "";
+        let selectedText = selection?.toString().trim() || "";
+        selectedText = sanitizeText(selectedText);
         sendResponse({ text: selectedText });
         return true;
       }
@@ -156,47 +157,4 @@ async function extractSelectedText(): Promise<ExtractedContent> {
   }
 
   return extractedContent;
-}
-
-/**
- * Extracts content for analysis - chooses between article extraction and text selection only
- */
-async function extractContentForAnalysis(): Promise<
-  ExtractedContent & { contentType: string }
-> {
-  const currentUrl = window.location.href;
-
-  if (!validateUrl(currentUrl)) {
-    throw new Error("Invalid URL for content extraction");
-  }
-
-  // Check if user has selected text
-  const selection = window.getSelection();
-  const selectedText = selection?.toString().trim() || "";
-
-  // If user has selected substantial text, prioritize that
-  if (selectedText && selectedText.length > 0) {
-    try {
-      const result = await extractSelectedText();
-      return { ...result, contentType: "article" as const };
-    } catch (error) {
-      console.warn(
-        "Selected text extraction failed, falling back to article extraction:",
-        error
-      );
-    }
-  }
-
-  // For articles, try Readability
-  try {
-    const result = await extractArticleText();
-    return { ...result, contentType: "article" as const };
-  } catch (error) {
-    console.warn("Article extraction failed:", error);
-  }
-
-  // If all methods fail, provide helpful error message
-  throw new Error(
-    "No analyzable content found on this page. Try selecting text manually or visit a news article."
-  );
 }

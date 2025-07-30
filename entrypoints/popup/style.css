@@ -15,8 +15,8 @@
   -webkit-text-size-adjust: 100%;
 
   /* Color variables - with improved contrast ratios */
-  --primary-color: #5e54e6; /* Slightly lighter for better contrast */
-  --primary-hover: #4f46e5;
+  --primary-color: #863297; /* Slightly lighter for better contrast */
+  --primary-hover: #9d07bb;
   --success-color: #10b981; /* Good contrast on dark backgrounds */
   --warning-color: #f59e0b; /* Good contrast on dark backgrounds */
   --error-color: #ef4444; /* Good contrast on dark backgrounds */
@@ -42,8 +42,8 @@
 body {
   margin: 0;
   padding: 0;
-  width: 380px;
-  min-height: 500px;
+  min-width: 350px;
+  min-height: 200px;
   background-color: var(--bg-primary);
   color: var(--text-primary);
 }
@@ -51,6 +51,16 @@ body {
 #app {
   width: 100%;
   height: 100%;
+}
+
+.scrollable-content {
+  overflow: auto; /* Ensures content is scrollable if it overflows */
+  scrollbar-width: none; /* For Firefox */
+  -ms-overflow-style: none; /* For Internet Explorer and Edge */
+}
+
+.scrollable-content::-webkit-scrollbar {
+  display: none; /* For Chrome, Safari, and Opera */
 }
 
 .hidden {
@@ -62,13 +72,12 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 500px;
+  min-height: 200px;
 }
 
 /* Header */
 .popup-header {
   padding: 16px 20px 12px;
-  border-bottom: 1px solid var(--border-color);
   background-color: var(--bg-secondary);
 }
 
