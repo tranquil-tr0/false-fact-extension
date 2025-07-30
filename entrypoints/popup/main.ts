@@ -250,7 +250,16 @@ async function analyzeSelectedText() {
       }
     );
 
-    console.log("Selected text for analysis:", selectedText);
+    //@ts-expect-error
+    if (selectedText.error) {
+      showError(
+        "Content Extraction Error",
+        //@ts-expect-error
+        selectedText.error,
+        "extraction_error"
+      );
+      return;
+    }
 
     state.currentUrl = tab.url || "";
     if (dom.pageUrl) {
@@ -910,8 +919,7 @@ function handleAnalysisError(
     case "api_unavailable":
       title = "Service Temporarily Unavailable";
       description = "The analysis service is currently unavailable.";
-      actionText =
-        "Please try again in a few minutes. Some results may use fallback analysis.";
+      actionText = "Please try again in a few minutes.";
       break;
 
     case "invalid_content":
