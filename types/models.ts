@@ -17,10 +17,20 @@ export interface AnalysisResult {
     unfactual: string[];
     subjective: string[];
     objective: string[];
-  }; // Explanation of analysis
+  };
   timestamp: number;
   contentHash: string; // For caching
   sources?: string[];
+}
+
+/**
+ * The real structure returned from background to popup is:
+ * { success: boolean, data?: AnalysisResult, error?: any }
+ */
+export interface AnalysisResponse {
+  success: boolean;
+  data?: AnalysisResult;
+  error?: any;
 }
 
 export interface ExtractedContent {

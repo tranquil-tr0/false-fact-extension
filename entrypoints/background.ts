@@ -1,4 +1,5 @@
 import type {
+  AnalysisResponse,
   AnalysisResult,
   ExtractedContent,
   PopupState,
@@ -9,6 +10,7 @@ import {
   createAnalysisError,
   type AnalysisError,
 } from "../types/index.js";
+import { generateContentHash } from "../utils/content.js";
 
 // Placeholder for iconManager object with required methods
 // TODO: Implement iconManager functionality
@@ -123,7 +125,7 @@ class BackgroundService {
   private async handleAnalyzeContent(
     data: ExtractedContent,
     tabId?: number
-  ): Promise<AnalysisResult> {
+  ): Promise<AnalysisResponse> {
     if (!tabId) {
       throw new ExtensionError(
         AnalysisErrorType.INVALID_CONTENT,
@@ -163,7 +165,7 @@ class BackgroundService {
 
     try {
       // Perform analysis based on content type
-      let analysisResult: AnalysisResult;
+      let analysisResult: AnalysisResponse;
       console.log("Extracted content:", data.content);
       console.log(data.contentType);
       if (data.contentType === "selection") {
@@ -176,7 +178,7 @@ class BackgroundService {
 
       // Update workflow with result
       workflow.status = "complete";
-      workflow.result = analysisResult;
+      workflow.result = analysisResult.data;
       iconManager.updateIconFromAnalysisResult(tabId, analysisResult);
 
       return analysisResult;
@@ -196,7 +198,7 @@ class BackgroundService {
    */
   private async performTextAnalysis(
     content: ExtractedContent
-  ): Promise<AnalysisResult> {
+  ): Promise<AnalysisResponse> {
     // Set up timeout for analysis
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
@@ -215,7 +217,7 @@ class BackgroundService {
         content,
       }: {
         content: string;
-      }): Promise<import("../types/index.js").AnalysisResult> {
+      }): Promise<AnalysisResponse> {
         const payload = { content };
         const response = await fetch(
           "https://api.falsefact.tranquil.hackclub.app/analyze/text/long",
@@ -232,7 +234,13 @@ class BackgroundService {
       })({
         content: content.content,
       });
-      return await Promise.race([analysisPromise, timeoutPromise]);
+      const result = await Promise.race([analysisPromise, timeoutPromise]);
+      // Cache the result in background
+      const selectionHash = generateContentHash(content.content);
+      await browser.storage.local.set({
+        [`selection_cache_${selectionHash}`]: result,
+      });
+      return result;
     } catch (error) {
       throw error;
     }
@@ -243,7 +251,7 @@ class BackgroundService {
    */
   private async performArticleAnalysis(
     content: ExtractedContent
-  ): Promise<AnalysisResult> {
+  ): Promise<AnalysisResponse> {
     // Use last_edited if available, otherwise fallback to timestamp
     const last_edited =
       content.last_edited || new Date(content.timestamp).toISOString();
@@ -271,7 +279,7 @@ class BackgroundService {
         title: string;
         url: string;
         last_edited: string;
-      }): Promise<import("../types/index.js").AnalysisResult> {
+      }): Promise<AnalysisResponse> {
         const payload = { content, title, url, last_edited };
         const response = await fetch(
           "https://api.falsefact.tranquil.hackclub.app/analyze/article",
@@ -291,7 +299,25 @@ class BackgroundService {
         url: content.url,
         last_edited,
       });
-      return await Promise.race([analysisPromise, timeoutPromise]);
+      const result = await Promise.race([analysisPromise, timeoutPromise]);
+      // Validate and standardize the response format
+      if (!result || typeof result !== "object" || !("data" in result)) {
+        throw new ExtensionError(
+          AnalysisErrorType.EXTRACTION_FAILED,
+          "Failed to parse API response format",
+          true,
+          "Please try again later"
+        );
+      }
+      // Cache the result.data in background (to match main.ts logic)
+      await browser.storage.local.set({
+        [`article_cache_${content.url}`]: {
+          url: content.url,
+          contentHash: generateContentHash(content.content),
+          analysisResult: result.data,
+        },
+      });
+      return result;
     } catch (error) {
       throw error;
     }

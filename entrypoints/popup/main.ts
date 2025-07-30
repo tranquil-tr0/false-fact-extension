@@ -280,8 +280,6 @@ async function analyzeSelectedText() {
       return;
     }
 
-    const selectionHash = generateContentHash(selectedText.content);
-
     // Update UI to analyzing state
     updateUIState("analyzing");
     if (dom.progressBar) {
@@ -299,9 +297,7 @@ async function analyzeSelectedText() {
       sendToast("Analysis complete");
       showResults(analysisResult.data);
       // Cache result
-      await browser.storage.local.set({
-        [`selection_cache_${selectionHash}`]: analysisResult.data,
-      });
+      // (Handled in background.ts, do not set here)
     } else {
       const error = analysisResult.error;
       const errorType = error?.type || "analysis_failed";
@@ -796,8 +792,6 @@ async function analyzeArticle() {
       return;
     }
 
-    const contentHash = generateContentHash(extractionResult.content);
-
     // Update UI to analyzing state with smooth transition
     updateUIState("analyzing");
 
@@ -841,13 +835,7 @@ async function analyzeArticle() {
         showResults(analysisResult.data);
 
         // Article cache: key by URL, value includes contentHash and result.
-        await browser.storage.local.set({
-          [`article_cache_${state.currentUrl}`]: {
-            url: state.currentUrl,
-            contentHash,
-            analysisResult: analysisResult.data,
-          },
-        });
+        // Cache result (handled in background.ts, do not set here)
       } else {
         const error = analysisResult.error;
         const errorType = error?.type || "analysis_failed";

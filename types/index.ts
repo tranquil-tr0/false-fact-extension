@@ -9,6 +9,7 @@ export type {
   IconState,
   AnalysisRequest,
   PopupState,
+  AnalysisResponse,
 } from "./models.js";
 
 // Error types
