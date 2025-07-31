@@ -746,14 +746,13 @@ body::-webkit-scrollbar {
 .reasoning-subsection ul {
   margin: 0;
   padding-left: 20px;
-  transition: max-height 0.3s ease, opacity 0.3s ease;
-  max-height: 500px;
+  transition: opacity 0.3s ease;
   opacity: 1;
   overflow: hidden;
 }
 
 .reasoning-subsection ul.collapsed {
-  max-height: 0;
+  height: 0;
   opacity: 0;
   margin: 0;
 }
