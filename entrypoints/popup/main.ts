@@ -811,25 +811,14 @@ async function analyzeArticle() {
         data: extractionResult,
       });
 
+      console.log("got back analysis result");
+
       if (analysisResult.success) {
         // Update progress to show completion
         updateProgress(100, "Analysis complete");
 
-        // Check if this is a fallback result and inform user
-        if (analysisResult.data.confidence <= 30) {
-          const reasoningStr = JSON.stringify(analysisResult.data.reasoning);
-          if (reasoningStr && reasoningStr.includes("Fallback analysis")) {
-            sendToast(
-              "Analysis completed with limited service - results may be less accurate"
-            );
-          } else {
-            // Show success animation
-            sendToast("Analysis complete");
-          }
-        } else {
-          // Show success animation
-          sendToast("Analysis complete");
-        }
+        // Show success toast
+        sendToast("Analysis complete");
 
         // Show results with highlight animation
         showResults(analysisResult.data);
@@ -1008,8 +997,8 @@ function handleShareResults() {
 // Progress tracking variables
 let progressTimer: number | null = null;
 let timeoutTimer: number | null = null;
-const SHORT_TIMEOUT = 30000; // 30 seconds
-const LONG_TIMEOUT = 60000; // 60 seconds
+const SHORT_TIMEOUT = 45000; // 45 seconds
+const LONG_TIMEOUT = 120000; // 120 seconds
 
 // Update progress indicator with enhanced visual feedback
 function updateProgress(percentage: number, message: string) {
@@ -1104,7 +1093,7 @@ function setupTimeoutHandling() {
       state.analysisStatus === "extracting" ||
       state.analysisStatus === "analyzing"
     ) {
-      handleCancelClick();
+      //handleCancelClick();
       showError(
         "Analysis Timeout",
         "The analysis took too long and was automatically cancelled. Try with shorter content or try again later.",
@@ -1158,7 +1147,7 @@ function showTimeoutWarning() {
               state.analysisStatus === "extracting" ||
               state.analysisStatus === "analyzing"
             ) {
-              handleCancelClick();
+              //handleCancelClick();
               showError(
                 "Analysis Timeout",
                 "The analysis took too long and was automatically cancelled.",

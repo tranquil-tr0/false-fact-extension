@@ -3,12 +3,14 @@
  */
 
 export enum AnalysisErrorType {
-  EXTRACTION_FAILED = 'extraction_failed',
-  API_UNAVAILABLE = 'api_unavailable',
-  NETWORK_ERROR = 'network_error',
-  CONTENT_TOO_LONG = 'content_too_long',
-  INVALID_CONTENT = 'invalid_content',
-  RATE_LIMITED = 'rate_limited'
+  EXTRACTION_FAILED = "extraction_failed",
+  API_UNAVAILABLE = "api_unavailable",
+  NETWORK_ERROR = "network_error",
+  CONTENT_TOO_LONG = "content_too_long",
+  INVALID_CONTENT = "invalid_content",
+  RATE_LIMITED = "rate_limited",
+  // maybe rm
+  OTHER = "other",
 }
 
 export interface AnalysisError {
@@ -26,7 +28,7 @@ export class ExtensionError extends Error {
     public suggestedAction?: string
   ) {
     super(message);
-    this.name = 'ExtensionError';
+    this.name = "ExtensionError";
   }
 
   toAnalysisError(): AnalysisError {
@@ -34,7 +36,7 @@ export class ExtensionError extends Error {
       type: this.type,
       message: this.message,
       retryable: this.retryable,
-      suggestedAction: this.suggestedAction
+      suggestedAction: this.suggestedAction,
     };
   }
 }
@@ -48,5 +50,5 @@ export const createAnalysisError = (
   type,
   message,
   retryable,
-  suggestedAction
+  suggestedAction,
 });

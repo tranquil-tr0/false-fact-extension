@@ -49,7 +49,7 @@ interface AnalysisWorkflow {
 class BackgroundService {
   private activeWorkflows = new Map<string, AnalysisWorkflow>();
   private readonly maxRetries = 3;
-  private readonly analysisTimeout = 60000; // 60 seconds
+  private readonly analysisTimeout = 120000; // 120 seconds
 
   constructor() {
     this.setupMessageHandlers();
@@ -67,7 +67,7 @@ class BackgroundService {
       switch (message.action) {
         case "analyze-content":
           this.handleAnalyzeContent(message.data, tabId)
-            .then((result) => sendResponse({ success: true, data: result }))
+            .then((result) => sendResponse(result))
             .catch((error) =>
               sendResponse({
                 success: false,
@@ -300,11 +300,18 @@ class BackgroundService {
         last_edited,
       });
       const result = await Promise.race([analysisPromise, timeoutPromise]);
+      console.log(result);
+      console.log(result.data);
       // Validate and standardize the response format
-      if (!result || typeof result !== "object" || !("data" in result)) {
+      if (
+        !result ||
+        typeof result !== "object" ||
+        !result.success ||
+        !result.data
+      ) {
         throw new ExtensionError(
-          AnalysisErrorType.EXTRACTION_FAILED,
-          "Failed to parse API response format",
+          AnalysisErrorType.OTHER,
+          "Failed to parse API response format - No response data",
           true,
           "Please try again later"
         );
