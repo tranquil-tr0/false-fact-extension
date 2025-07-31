@@ -12,8 +12,8 @@ export {
   generateContentHash,
   validateUrl,
   extractDomain,
-  isSocialMediaContent
-} from './content.js';
+  isSocialMediaContent,
+} from "./content.js";
 
 // Validation utilities
 export {
@@ -21,8 +21,8 @@ export {
   validateAnalysisRequest,
   validatePollinationsResponse,
   parseAnalysisResponse,
-  validateIconState
-} from './validation.js';
+  validateIconState,
+} from "./validation.js";
 
 // Icon generation utilities
 export {
@@ -32,6 +32,5 @@ export {
   ICON_SIZES,
   type IconAnimationData,
   type AnimationStep,
-  type IconVisibilityTest
-} from './icon-generator.js';
-
+  type IconVisibilityTest,
+} from "./icon-generator.js";

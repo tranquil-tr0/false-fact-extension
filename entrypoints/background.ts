@@ -3,14 +3,14 @@ import type {
   AnalysisResult,
   ExtractedContent,
   PopupState,
+  AnalysisError,
 } from "../types/index.js";
 import {
   AnalysisErrorType,
   ExtensionError,
   createAnalysisError,
-  type AnalysisError,
 } from "../types/index.js";
-import { generateContentHash } from "../utils/content.js";
+import { generateContentHash } from "../utils/index.js";
 
 // Placeholder for iconManager object with required methods
 // TODO: Implement iconManager functionality

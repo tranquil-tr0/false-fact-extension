@@ -2,8 +2,8 @@
  * Content validation and sanitization utilities
  */
 
-import type { ExtractedContent } from "../types/models.js";
-import { AnalysisErrorType, ExtensionError } from "../types/errors.js";
+import type { ExtractedContent } from "../types/index.js";
+import { AnalysisErrorType, ExtensionError } from "../types/index.js";
 import murmurhash from "murmurhash";
 
 // Content validation constants

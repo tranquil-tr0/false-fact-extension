@@ -2,7 +2,7 @@
  * Balance visualization component for displaying fact/opinion percentages
  */
 
-import { AnalysisResult } from '../types/models.js';
+import { AnalysisResult } from "../types/index.js";
 
 export class BalanceVisualization {
   private container: HTMLElement;
@@ -15,13 +15,16 @@ export class BalanceVisualization {
   }>;
   private animationDuration = 800; // ms
 
-  constructor(container: HTMLElement, options: {
-    width?: number;
-    height?: number;
-    showLabels?: boolean;
-    showPercentages?: boolean;
-    animated?: boolean;
-  } = {}) {
+  constructor(
+    container: HTMLElement,
+    options: {
+      width?: number;
+      height?: number;
+      showLabels?: boolean;
+      showPercentages?: boolean;
+      animated?: boolean;
+    } = {}
+  ) {
     this.container = container;
     this.options = {
       width: options.width ?? 300,
@@ -30,14 +33,17 @@ export class BalanceVisualization {
       showPercentages: options.showPercentages ?? true,
       animated: options.animated ?? true,
     };
-    
+
     this.initializeContainer();
   }
 
   private initializeContainer(): void {
-    this.container.className = 'balance-visualization';
-    this.container.setAttribute('role', 'region');
-    this.container.setAttribute('aria-label', 'Credibility Analysis Visualization');
+    this.container.className = "balance-visualization";
+    this.container.setAttribute("role", "region");
+    this.container.setAttribute(
+      "aria-label",
+      "Credibility Analysis Visualization"
+    );
     this.container.innerHTML = `
       <div class="balance-header">
         <h3 id="balance-visualization-title">Credibility Analysis</h3>
@@ -67,32 +73,39 @@ export class BalanceVisualization {
 
   public render(analysisResult: AnalysisResult): void {
     const { categories, credibilityScore, confidence } = analysisResult;
-    
+
     // Update segment widths and labels
-    this.updateSegment('factuality', categories.factuality);
-    this.updateSegment('objectivity', categories.objectivity);
-    
+    this.updateSegment("factuality", categories.factuality);
+    this.updateSegment("objectivity", categories.objectivity);
+
     // Update overall credibility score
     this.updateCredibilityScore(credibilityScore, confidence);
-    
+
     // Add credibility level class for styling
     this.updateCredibilityLevel(credibilityScore);
   }
 
-  private updateSegment(category: 'factuality' | 'objectivity', percentage: number): void {
-    const segment = this.container.querySelector(`[data-category="${category}"]`) as HTMLElement;
+  private updateSegment(
+    category: "factuality" | "objectivity",
+    percentage: number
+  ): void {
+    const segment = this.container.querySelector(
+      `[data-category="${category}"]`
+    ) as HTMLElement;
     if (!segment) return;
 
-    const percentageElement = segment.querySelector('.segment-percentage') as HTMLElement;
-    const labelElement = segment.querySelector('.segment-label') as HTMLElement;
+    const percentageElement = segment.querySelector(
+      ".segment-percentage"
+    ) as HTMLElement;
+    const labelElement = segment.querySelector(".segment-label") as HTMLElement;
 
     // Update ARIA attributes for accessibility
-    segment.setAttribute('aria-valuenow', Math.round(percentage).toString());
-    
+    segment.setAttribute("aria-valuenow", Math.round(percentage).toString());
+
     if (this.options.animated) {
       // Animate width change
       segment.style.transition = `width ${this.animationDuration}ms ease-out`;
-      
+
       // Animate percentage counter
       this.animatePercentage(percentageElement, percentage);
     } else {
@@ -101,20 +114,26 @@ export class BalanceVisualization {
 
     // Set width as percentage of total
     segment.style.width = `${percentage}%`;
-    
+
     // Hide label and percentage if segment is too small, but keep accessible for screen readers
     const shouldHideText = percentage < 15;
-    labelElement.style.opacity = shouldHideText ? '0' : '1';
-    percentageElement.style.opacity = shouldHideText ? '0' : '1';
-    
+    labelElement.style.opacity = shouldHideText ? "0" : "1";
+    percentageElement.style.opacity = shouldHideText ? "0" : "1";
+
     // Even if visually hidden, ensure screen readers can access the information
     if (shouldHideText) {
       const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
-      segment.setAttribute('aria-label', `${categoryName} content: ${Math.round(percentage)}%`);
+      segment.setAttribute(
+        "aria-label",
+        `${categoryName} content: ${Math.round(percentage)}%`
+      );
     }
   }
 
-  private animatePercentage(element: HTMLElement, targetPercentage: number): void {
+  private animatePercentage(
+    element: HTMLElement,
+    targetPercentage: number
+  ): void {
     const startValue = 0;
     const duration = this.animationDuration;
     const startTime = performance.now();
@@ -122,13 +141,14 @@ export class BalanceVisualization {
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
+
       // Easing function for smooth animation
       const easeOutCubic = 1 - Math.pow(1 - progress, 3);
-      const currentValue = startValue + (targetPercentage - startValue) * easeOutCubic;
-      
+      const currentValue =
+        startValue + (targetPercentage - startValue) * easeOutCubic;
+
       element.textContent = `${Math.round(currentValue)}%`;
-      
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       }
@@ -138,37 +158,53 @@ export class BalanceVisualization {
   }
 
   private updateCredibilityScore(score: number, confidence: number): void {
-    const scoreElement = this.container.querySelector('.score-value') as HTMLElement;
-    const confidenceElement = this.container.querySelector('.confidence-value') as HTMLElement;
+    const scoreElement = this.container.querySelector(
+      ".score-value"
+    ) as HTMLElement;
+    const confidenceElement = this.container.querySelector(
+      ".confidence-value"
+    ) as HTMLElement;
 
     // Update ARIA attributes for accessibility
-    scoreElement.setAttribute('aria-valuenow', Math.round(score).toString());
-    confidenceElement.setAttribute('aria-valuenow', Math.round(confidence).toString());
+    scoreElement.setAttribute("aria-valuenow", Math.round(score).toString());
+    confidenceElement.setAttribute(
+      "aria-valuenow",
+      Math.round(confidence).toString()
+    );
 
     if (this.options.animated) {
       this.animateScore(scoreElement, score);
-      this.animateScore(confidenceElement, confidence, '%');
+      this.animateScore(confidenceElement, confidence, "%");
     } else {
       scoreElement.textContent = `${Math.round(score)}/100`;
       confidenceElement.textContent = `${Math.round(confidence)}%`;
     }
-    
+
     // Add a descriptive label for screen readers based on credibility level
-    let credibilityDescription = '';
+    let credibilityDescription = "";
     if (score >= 80) {
-      credibilityDescription = 'High credibility';
+      credibilityDescription = "High credibility";
     } else if (score >= 60) {
-      credibilityDescription = 'Moderate credibility';
+      credibilityDescription = "Moderate credibility";
     } else if (score >= 40) {
-      credibilityDescription = 'Low credibility';
+      credibilityDescription = "Low credibility";
     } else {
-      credibilityDescription = 'Very low credibility';
+      credibilityDescription = "Very low credibility";
     }
-    
-    scoreElement.setAttribute('aria-label', `Overall credibility score: ${Math.round(score)} out of 100. ${credibilityDescription}`);
+
+    scoreElement.setAttribute(
+      "aria-label",
+      `Overall credibility score: ${Math.round(
+        score
+      )} out of 100. ${credibilityDescription}`
+    );
   }
 
-  private animateScore(element: HTMLElement, targetValue: number, suffix: string = '/100'): void {
+  private animateScore(
+    element: HTMLElement,
+    targetValue: number,
+    suffix: string = "/100"
+  ): void {
     const startValue = 0;
     const duration = this.animationDuration;
     const startTime = performance.now();
@@ -176,12 +212,13 @@ export class BalanceVisualization {
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
+
       const easeOutCubic = 1 - Math.pow(1 - progress, 3);
-      const currentValue = startValue + (targetValue - startValue) * easeOutCubic;
-      
+      const currentValue =
+        startValue + (targetValue - startValue) * easeOutCubic;
+
       element.textContent = `${Math.round(currentValue)}${suffix}`;
-      
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       }
@@ -192,36 +229,40 @@ export class BalanceVisualization {
 
   private updateCredibilityLevel(score: number): void {
     // Remove existing credibility level classes
-    this.container.classList.remove('high-credibility', 'medium-credibility', 'low-credibility');
-    
+    this.container.classList.remove(
+      "high-credibility",
+      "medium-credibility",
+      "low-credibility"
+    );
+
     // Add appropriate class based on score
     if (score >= 70) {
-      this.container.classList.add('high-credibility');
+      this.container.classList.add("high-credibility");
     } else if (score >= 40) {
-      this.container.classList.add('medium-credibility');
+      this.container.classList.add("medium-credibility");
     } else {
-      this.container.classList.add('low-credibility');
+      this.container.classList.add("low-credibility");
     }
   }
 
   public showLoadingState(): void {
-    this.container.classList.add('loading');
-    const segments = this.container.querySelectorAll('.balance-segment');
-    segments.forEach(segment => {
-      (segment as HTMLElement).style.width = '33.33%';
-      segment.querySelector('.segment-percentage')!.textContent = '...';
+    this.container.classList.add("loading");
+    const segments = this.container.querySelectorAll(".balance-segment");
+    segments.forEach((segment) => {
+      (segment as HTMLElement).style.width = "33.33%";
+      segment.querySelector(".segment-percentage")!.textContent = "...";
     });
-    
-    this.container.querySelector('.score-value')!.textContent = '...';
-    this.container.querySelector('.confidence-value')!.textContent = '...';
+
+    this.container.querySelector(".score-value")!.textContent = "...";
+    this.container.querySelector(".confidence-value")!.textContent = "...";
   }
 
   public hideLoadingState(): void {
-    this.container.classList.remove('loading');
+    this.container.classList.remove("loading");
   }
 
-  public showErrorState(message: string = 'Analysis failed'): void {
-    this.container.classList.add('error');
+  public showErrorState(message: string = "Analysis failed"): void {
+    this.container.classList.add("error");
     this.container.innerHTML = `
       <div class="error-message">
         <div class="error-icon">⚠️</div>
@@ -231,7 +272,13 @@ export class BalanceVisualization {
   }
 
   public reset(): void {
-    this.container.classList.remove('loading', 'error', 'high-credibility', 'medium-credibility', 'low-credibility');
+    this.container.classList.remove(
+      "loading",
+      "error",
+      "high-credibility",
+      "medium-credibility",
+      "low-credibility"
+    );
     this.initializeContainer();
   }
 }

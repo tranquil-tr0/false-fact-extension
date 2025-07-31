@@ -8,7 +8,7 @@ import {
   announceMessage,
   type KeyboardShortcut,
 } from "../../utils/accessibility.js";
-import { generateContentHash } from "../../utils/content.js";
+import { generateContentHash } from "../../utils/index.js";
 
 // State management
 type AnalysisStatus =

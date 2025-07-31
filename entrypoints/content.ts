@@ -1,12 +1,11 @@
 import { Readability } from "@mozilla/readability";
 import TurndownService from "turndown";
-import type { ExtractedContent } from "../types/models.js";
+import type { ExtractedContent } from "../types/index.js";
 import {
   sanitizeText,
   sanitizeTitle,
   countWords,
   validateContent,
-  isSocialMediaContent,
   validateUrl,
 } from "../utils/index.js";
 
