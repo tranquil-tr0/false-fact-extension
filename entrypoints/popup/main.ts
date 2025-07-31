@@ -151,8 +151,8 @@ async function initializePopup() {
           // Content changed, trigger new analysis
           await analyzeArticle();
         } else {
-          checkUpdatesBtn.textContent = "Article is unchanged.";
-          sendToast("Article has not been updated. Content is unchanged.");
+          checkUpdatesBtn.textContent = "Content unchanged.";
+          sendToast("Article has not been edited.");
           setTimeout(() => {
             checkUpdatesBtn.textContent = "Check for updates";
           }, 2000);
@@ -649,15 +649,15 @@ function formatReasoning(
   return sections
     .map(({ label, key }) =>
       Array.isArray(reasoning[key]) && reasoning[key].length
-        ? `<div class="reasoning-subsection">
-              <div class="reasoning-subheader">${label} Reasons</div>
+        ? `<details class="reasoning-subsection">
+              <summary class="reasoning-subheader expandable">${label}</summary>
               <ul>${(reasoning[key] as string[])
                 .map(
                   (reason: string) =>
                     `<li>${linkifySources(reason, sources)}</li>`
                 )
                 .join("")}</ul>
-            </div>`
+            </details>`
         : ""
     )
     .join("");

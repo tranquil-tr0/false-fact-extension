@@ -636,9 +636,9 @@ body::-webkit-scrollbar {
 .category-label {
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-secondary);
-  min-width: 50px;
-  text-align: right;
+  color: var(--text-primary);
+  min-width: 60px;
+  text-align: left;
 }
 
 .category-bar {
@@ -672,20 +672,21 @@ body::-webkit-scrollbar {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
-  min-width: 35px;
+  min-width: 30px;
   text-align: right;
 }
 
 /* Reasoning Section */
 .reasoning-section {
-  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
 }
 
 .reasoning-header {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .reasoning-content {
@@ -708,7 +709,7 @@ body::-webkit-scrollbar {
 
 /* Expandable reasoning sections */
 .reasoning-subsection {
-  margin-bottom: 12px;
+  margin-bottom: 5px;
 }
 
 .reasoning-subsection:last-child {
@@ -716,8 +717,8 @@ body::-webkit-scrollbar {
 }
 
 .reasoning-subheader {
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 500;
+  font-size: 13.5px;
   color: var(--text-primary);
   margin-bottom: 6px;
   cursor: default;
@@ -727,19 +728,19 @@ body::-webkit-scrollbar {
   cursor: pointer;
   display: flex;
   align-items: center;
-  padding: 4px 0;
 }
 
-.reasoning-subheader.expandable::after {
+.reasoning-subheader.expandable::before {
   content: "▼";
-  font-size: 10px;
-  margin-left: 6px;
+  font-size: 8px;
+  margin-right: 2px;
   transition: transform 0.2s ease;
   color: var(--text-secondary);
 }
 
-.reasoning-subheader.expandable.expanded::after {
-  transform: rotate(180deg);
+.reasoning-subheader.expandable.expanded::before {
+  transform-origin: center;
+  transform: rotate(-90deg);
 }
 
 .reasoning-subsection ul {
@@ -772,6 +773,9 @@ body::-webkit-scrollbar {
 .result-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
+  justify-content: center;
+  overflow: clip;
 }
 
 .action-button {
@@ -794,6 +798,10 @@ body::-webkit-scrollbar {
 
 .action-button.secondary {
   color: var(--text-secondary);
+  font-size: 12px;
+  height: 30px;
+  min-width: fit-content;
+  padding: 0px 6px;
 }
 
 .action-button.secondary:hover {
