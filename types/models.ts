@@ -3,23 +3,24 @@
  */
 
 export interface AnalysisResult {
-  id: string;
-  url: string;
-  title: string;
-  credibilityScore: number; // Overall score 0-100
-  categories: {
-    factuality: number; // Percentage 0-100
-    objectivity: number; // Percentage 0-100
-  };
-  confidence: number; // AI confidence 0-100
+  // id: string;
+  // url: string;
+  // title: string;
+  // timestamp: number;
+  // contentHash: string;
+
   reasoning: {
     factual: string[];
     unfactual: string[];
     subjective: string[];
     objective: string[];
   };
-  timestamp: number;
-  contentHash: string; // For caching
+  credibilityScore: number; // Overall score 0-100
+  categories: {
+    factuality: number; // Percentage 0-100
+    objectivity: number; // Percentage 0-100
+  };
+  confidence: number; // AI confidence 0-100
   sources?: string[];
 }
 

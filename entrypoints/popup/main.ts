@@ -217,6 +217,7 @@ async function handleSelectionAnalysisClick(selectedText: string) {
       analyzeSelectedText();
     }
   } catch (error) {
+    console.error("Error looking for cache:", error);
     showError(
       "Failed to check for cached selection",
       "An unexpected error occurred while checking for cached selection. Please try again.",

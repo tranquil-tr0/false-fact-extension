@@ -236,9 +236,10 @@ class BackgroundService {
       });
       const result = await Promise.race([analysisPromise, timeoutPromise]);
       // Cache the result in background
+      console.log("hash of:", content.content);
       const selectionHash = generateContentHash(content.content);
       await browser.storage.local.set({
-        [`selection_cache_${selectionHash}`]: result,
+        [`selection_cache_${selectionHash}`]: result.data,
       });
       return result;
     } catch (error) {
