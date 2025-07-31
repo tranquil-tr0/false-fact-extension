@@ -8,3 +8,4 @@ mark text selection as article future
 make use of the short text analysis endpoint future
 consider not loading content script immediately future
 reimplement dynamic icons future
+add ability to show "opinion" for non factual claim articles/text
