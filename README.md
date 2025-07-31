@@ -15,6 +15,9 @@ I'm publishing now
 ## contributions
 
 PRs welcome, you can work on whatever, or there is also a [todo list](TODO.md)
+Also file issues if you have a suggestion or issue of course
+
+different kind of contribution: the [backend](https://github.com/tranquil-tr0/false-fact-server) can't do high load because I don't have the money for that, you're free to help support or give suggestions for that too
 
 ## Screenshot
 
