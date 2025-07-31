@@ -506,26 +506,23 @@ function showResults(analysisResult: AnalysisResult) {
         scoreElement.classList.add("highlight-animation");
       }
     }
-
-    // Animate category bars sequentially
-    if (dom.resultDisplay) {
-      const categoryBars = dom.resultDisplay.querySelectorAll(".category-fill");
-      categoryBars.forEach((element: Element, index: number) => {
-        const bar = element as HTMLElement;
-        setTimeout(() => {
-          // Force a reflow to restart the animation
-          bar.style.width = "0%";
-
-          // Set the actual width after a tiny delay
-          setTimeout(() => {
-            const percentage =
-              bar.parentElement?.nextElementSibling?.textContent || "0%";
-            bar.style.width = percentage;
-          }, 50);
-        }, index * 200); // Stagger the animations
-      });
-    }
   }, 300);
+
+  // Animate category bars sequentially
+  if (dom.resultDisplay) {
+    const categoryBars = dom.resultDisplay.querySelectorAll(".category-fill");
+    categoryBars.forEach((element: Element, index: number) => {
+      const bar = element as HTMLElement;
+      // Stagger the animations
+      setTimeout(() => {
+        if (index == 0) {
+          bar.style.width = analysisResult.categories.factuality + "%";
+        } else if (index == 1) {
+          bar.style.width = analysisResult.categories.objectivity + "%";
+        }
+      }, index * 200);
+    });
+  }
 
   // Add event listeners to expandable sections if they exist
   setupResultInteractions();
@@ -553,9 +550,7 @@ function createResultsHTML(result: AnalysisResult): string {
         <div class="category-item">
           <div class="category-label">Factuality</div>
           <div class="category-bar">
-            <div class="category-fill fact" style="width: ${
-              result.categories.factuality
-            }%"></div>
+            <div class="category-fill fact" style="width: 0%"></div>
           </div>
           <div class="category-percentage">${
             result.categories.factuality
@@ -565,9 +560,7 @@ function createResultsHTML(result: AnalysisResult): string {
         <div class="category-item">
           <div class="category-label">Objectivity</div>
           <div class="category-bar">
-            <div class="category-fill opinion" style="width: ${
-              result.categories.objectivity
-            }%"></div>
+            <div class="category-fill opinion" style="width: 0%"></div>
           </div>
           <div class="category-percentage">${
             result.categories.objectivity
@@ -1504,12 +1497,4 @@ document.addEventListener("DOMContentLoaded", () => {
       handleAnalyzeAgain();
     });
   if (dom.helpBtn) dom.helpBtn.addEventListener("click", handleHelpClick);
-
-  // remove scrollbar
-  var styleElement = document.createElement("style");
-  styleElement.id = "remove-scroll-style";
-  styleElement.textContent =
-    "html::-webkit-scrollbar{display:none !important}" +
-    "body::-webkit-scrollbar{display:none !important}";
-  document.getElementsByTagName("body")[0].appendChild(styleElement);
 });
