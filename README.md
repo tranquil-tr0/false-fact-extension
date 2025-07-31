@@ -22,3 +22,5 @@ different kind of contribution: the [backend](https://github.com/tranquil-tr0/fa
 ## Screenshot
 
 ![screenshot](https://hc-cdn.hel1.your-objectstorage.com/s/v3/2835160d8d227d3184c69be39685ae526e4535a3_image.png)
+
+*made with WXT framework, use it if you want to build/dev the project, pnpm used*
